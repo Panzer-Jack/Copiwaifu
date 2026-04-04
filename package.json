@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "run": "pnpm tauri dev"
   },
   "dependencies": {
     "@panzerjack/eslint-config": "^3.0.0",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "easy-live2d": "^0.4.0",
     "eslint-plugin-format": "^2.0.1",

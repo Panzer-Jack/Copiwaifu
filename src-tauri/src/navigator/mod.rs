@@ -34,12 +34,6 @@ pub fn emit_all(app_handle: &AppHandle, emissions: Vec<NavigatorEmission>) {
             NavigatorEmission::StateChange(payload) => {
                 let _ = app_handle.emit("agent:state-change", payload);
             }
-            NavigatorEmission::PermissionRequest(payload) => {
-                let _ = app_handle.emit("permission:request", payload);
-            }
-            NavigatorEmission::PermissionResolved(payload) => {
-                let _ = app_handle.emit("permission:resolved", payload);
-            }
         }
     }
 }

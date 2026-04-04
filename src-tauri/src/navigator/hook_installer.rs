@@ -51,10 +51,6 @@ fn install_claude_hooks(script_path: &Path) -> Result<(), String> {
         ("PostToolUseFailure", command_for(script_path, "error")),
         ("Stop", command_for(script_path, "complete")),
         ("Notification", command_for(script_path, "complete")),
-        (
-            "PermissionRequest",
-            command_for(script_path, "permission_request"),
-        ),
     ];
 
     upsert_claude_hooks(config_path.as_path(), &hooks)

@@ -1,10 +1,11 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { onMounted, onUnmounted, ref } from 'vue'
-import type { AgentState, AgentType, NavigatorStatus, StateChangeEvent } from '../types/agent'
+import { AGENT_STATE } from '../types/agent'
+import type { AgentType, NavigatorStatus, StateChangeEvent, TAgentState } from '../types/agent'
 
 export function useAgentState() {
-  const currentState = ref<AgentState>('idle')
+  const currentState = ref<TAgentState>(AGENT_STATE.IDLE)
   const activeAgent = ref<AgentType | null>(null)
   const serverPort = ref<number | null>(null)
   const sessionInfo = ref<{

@@ -216,11 +216,7 @@ fn parse_jsonl_line(line: &str, tracked: &mut TrackedFile) -> Result<Option<Agen
         agent: AgentType::Codex,
         session_id: tracked.session_id.clone(),
         event,
-        data: EventData {
-            tool_name,
-            summary,
-            permission_id: None,
-        },
+        data: EventData { tool_name, summary },
     }))
 }
 

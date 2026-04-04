@@ -4,6 +4,7 @@ use tauri::{ActivationPolicy, Manager};
 use tauri_nspanel::{cocoa::appkit::NSWindowCollectionBehavior, WebviewWindowExt};
 
 mod navigator;
+mod shell;
 
 #[allow(non_upper_case_globals)]
 #[cfg(target_os = "macos")]
@@ -37,8 +38,15 @@ fn elevate_desktop_pet_window(window: &tauri::WebviewWindow) -> tauri::Result<()
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_nspanel::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             navigator::init(app);
+            #[cfg(target_os = "macos")]
+            app.handle().plugin(tauri_plugin_autostart::init(
+                tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+                None::<Vec<&str>>,
+            ))?;
+            shell::init(app)?;
 
             #[cfg(target_os = "macos")]
             {
@@ -62,9 +70,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            navigator::commands::respond_permission,
             navigator::commands::get_agent_status,
-            navigator::commands::uninstall_hooks
+            navigator::commands::uninstall_hooks,
+            shell::commands::get_app_bootstrap,
+            shell::commands::scan_model_directory,
+            shell::commands::scan_default_model,
+            shell::commands::save_settings,
+            shell::commands::open_settings_window,
+            shell::commands::toggle_main_window_visibility,
+            shell::commands::exit_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

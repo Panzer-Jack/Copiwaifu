@@ -9,7 +9,6 @@ use tauri::AppHandle;
 use super::{emit_all, state::NavigatorState, NavigatorStore};
 
 pub const SESSION_TTL: Duration = Duration::from_secs(60);
-pub const PERMISSION_TTL: Duration = Duration::from_secs(60);
 
 pub fn session_key(agent: &super::events::AgentType, session_id: &str) -> String {
     format!("{}::{session_id}", agent.as_str())

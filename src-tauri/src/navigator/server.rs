@@ -14,6 +14,7 @@ use super::{
     events::{IncomingHookEvent, NavigatorEmission},
     state::NavigatorState,
 };
+use crate::shell;
 
 const DEFAULT_PORT: u16 = 23333;
 const PORT_ATTEMPTS: u16 = 10;
@@ -61,17 +62,9 @@ pub fn start(app_handle: AppHandle, state: Arc<Mutex<NavigatorState>>) {
                     let response = handle_event_request(&mut request, &app_handle, &state);
                     let _ = request.respond(response);
                 }
-                (&Method::Get, url) if url.starts_with("/permission/") => {
-                    let permission_id = url.trim_start_matches("/permission/");
-                    let status = match state.lock() {
-                        Ok(mut navigator) => navigator.get_permission_status(permission_id),
-                        Err(err) => {
-                            eprintln!("navigator permission lock poisoned: {err}");
-                            super::events::PermissionStatus::Denied
-                        }
-                    };
-                    let _ = request
-                        .respond(json_response(StatusCode(200), json!({ "status": status })));
+                (&Method::Get, url) if url.starts_with("/model/current/") => {
+                    let response = handle_model_request(url, &app_handle);
+                    let _ = request.respond(response);
                 }
                 _ => {
                     let _ = request.respond(json_response(
@@ -141,7 +134,62 @@ fn json_response(
     if let Ok(header) = Header::from_bytes("Content-Type", "application/json") {
         response = response.with_header(header);
     }
+    if let Ok(header) = Header::from_bytes("Access-Control-Allow-Origin", "*") {
+        response = response.with_header(header);
+    }
     response
+}
+
+fn handle_model_request(url: &str, app_handle: &AppHandle) -> Response<std::io::Cursor<Vec<u8>>> {
+    let relative = url.trim_start_matches("/model/current/");
+    let Ok(decoded) = urlencoding::decode(relative) else {
+        return json_response(StatusCode(400), json!({ "error": "invalid_model_path" }));
+    };
+
+    let Some(model_directory) = shell::current_model_directory(app_handle) else {
+        return json_response(StatusCode(404), json!({ "error": "no_custom_model" }));
+    };
+
+    let file_path = match shell::resolve_model_resource_path(&model_directory, decoded.as_ref()) {
+        Ok(path) => path,
+        Err(err) => return json_response(StatusCode(404), json!({ "error": err })),
+    };
+
+    let bytes = match fs::read(&file_path) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            return json_response(
+                StatusCode(500),
+                json!({ "error": format!("failed_to_read_resource: {err}") }),
+            )
+        }
+    };
+
+    let mut response = Response::from_data(bytes).with_status_code(StatusCode(200));
+    if let Ok(header) = Header::from_bytes("Content-Type", content_type_for(&file_path)) {
+        response = response.with_header(header);
+    }
+    if let Ok(header) = Header::from_bytes("Access-Control-Allow-Origin", "*") {
+        response = response.with_header(header);
+    }
+    response
+}
+
+fn content_type_for(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or_default()
+    {
+        "json" => "application/json",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "moc3" => "application/octet-stream",
+        "wav" => "audio/wav",
+        "mp3" => "audio/mpeg",
+        "ogg" => "audio/ogg",
+        _ => "application/octet-stream",
+    }
 }
 
 fn write_port_files(port: u16) {

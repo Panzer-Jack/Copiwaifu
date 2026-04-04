@@ -18,7 +18,6 @@ const EVENT_MAP = {
   tool_result: 'tool_result',
   error: 'error',
   complete: 'complete',
-  permission_request: 'permission_request',
 }
 
 const mappedEvent = EVENT_MAP[eventName]
@@ -59,63 +58,7 @@ function handle(rawInput) {
     },
   }
 
-  if (mappedEvent !== 'permission_request') {
-    postJson(port, '/event', payload, 800, () => process.exit(0), () => process.exit(0))
-    return
-  }
-
-  const permissionId = `perm-${Date.now()}-${process.pid}`
-  payload.data.permission_id = permissionId
-
-  postJson(port, '/event', payload, 800, () => pollPermission(port, permissionId), () => process.exit(0))
-}
-
-function pollPermission(port, permissionId) {
-  const startedAt = Date.now()
-
-  const timer = setInterval(() => {
-    if (Date.now() - startedAt > 35000) {
-      clearInterval(timer)
-      deny()
-      return
-    }
-
-    const req = http.get({
-      host: '127.0.0.1',
-      port,
-      path: `/permission/${permissionId}`,
-      timeout: 1000,
-    }, (res) => {
-      let body = ''
-      res.on('data', chunk => {
-        body += chunk
-      })
-      res.on('end', () => {
-        const data = parseJson(body)
-        if (data.status === 'pending') {
-          return
-        }
-
-        clearInterval(timer)
-        if (data.status === 'approved') {
-          process.exit(0)
-          return
-        }
-
-        deny()
-      })
-    })
-
-    req.on('error', () => {})
-    req.on('timeout', () => {
-      req.destroy()
-    })
-  }, 500)
-}
-
-function deny() {
-  process.stdout.write(`${JSON.stringify({ decision: 'block', reason: '用户拒绝' })}\n`)
-  process.exit(2)
+  postJson(port, '/event', payload, 800, () => process.exit(0), () => process.exit(0))
 }
 
 function postJson(port, route, payload, timeout, onSuccess, onFailure) {

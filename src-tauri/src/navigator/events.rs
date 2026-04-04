@@ -27,7 +27,6 @@ pub enum EventType {
     ToolUse,
     ToolResult,
     Error,
-    PermissionRequest,
     Complete,
 }
 
@@ -38,13 +37,11 @@ pub enum AgentState {
     Thinking,
     ToolUse,
     Error,
-    WaitingPermission,
 }
 
 impl AgentState {
     pub fn priority(&self) -> u8 {
         match self {
-            Self::WaitingPermission => 5,
             Self::Error => 4,
             Self::ToolUse => 3,
             Self::Thinking => 2,
@@ -59,8 +56,6 @@ pub struct EventData {
     pub tool_name: Option<String>,
     #[serde(default)]
     pub summary: Option<String>,
-    #[serde(default)]
-    pub permission_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -89,8 +84,6 @@ pub struct IncomingHookEvent {
     pub tool_name: Option<String>,
     #[serde(default)]
     pub summary: Option<String>,
-    #[serde(default)]
-    pub permission_id: Option<String>,
 }
 
 impl IncomingHookEvent {
@@ -114,9 +107,6 @@ impl IncomingHookEvent {
         }
         if data.summary.is_none() {
             data.summary = self.summary;
-        }
-        if data.permission_id.is_none() {
-            data.permission_id = self.permission_id;
         }
 
         Ok(AgentEvent {
@@ -143,7 +133,6 @@ fn event_type_from_state(state: AgentState) -> EventType {
         AgentState::Thinking => EventType::Thinking,
         AgentState::ToolUse => EventType::ToolUse,
         AgentState::Error => EventType::Error,
-        AgentState::WaitingPermission => EventType::PermissionRequest,
     }
 }
 
@@ -155,7 +144,6 @@ fn parse_event_type(value: &str) -> Result<EventType, String> {
         "tool_use" | "PreToolUse" | "preToolUse" => EventType::ToolUse,
         "tool_result" | "PostToolUse" | "postToolUse" => EventType::ToolResult,
         "error" | "PostToolUseFailure" | "StopFailure" | "errorOccurred" => EventType::Error,
-        "permission_request" | "PermissionRequest" => EventType::PermissionRequest,
         "complete" | "Stop" | "agentStop" | "Notification" | "notification" => EventType::Complete,
         "Elicitation" | "SubagentStart" | "subagentStart" | "SubagentStop" | "subagentStop"
         | "PreCompact" | "preCompact" | "PostCompact" | "WorktreeCreate" => EventType::ToolUse,
@@ -163,14 +151,6 @@ fn parse_event_type(value: &str) -> Result<EventType, String> {
     };
 
     Ok(event)
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PermissionStatus {
-    Pending,
-    Approved,
-    Denied,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -189,25 +169,8 @@ pub struct StateChangePayload {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct PermissionRequestPayload {
-    pub permission_id: String,
-    pub agent: AgentType,
-    pub session_id: String,
-    pub tool_name: String,
-    pub summary: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct PermissionResolvedPayload {
-    pub permission_id: String,
-    pub status: PermissionStatus,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct NavigatorStatus {
     pub current: StateChangePayload,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub active_permission: Option<PermissionRequestPayload>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub server_port: Option<u16>,
 }
@@ -215,6 +178,4 @@ pub struct NavigatorStatus {
 #[derive(Clone, Debug)]
 pub enum NavigatorEmission {
     StateChange(StateChangePayload),
-    PermissionRequest(PermissionRequestPayload),
-    PermissionResolved(PermissionResolvedPayload),
 }
