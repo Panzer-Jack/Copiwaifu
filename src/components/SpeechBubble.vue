@@ -19,56 +19,80 @@ defineProps<{
 <style scoped>
 .speech-bubble {
   position: absolute;
-  top: 10%;
+  top: 0%;
   right: 15%;
   max-width: 240px;
   max-height: 120px;
+  min-height: 50px;
   overflow: hidden;
-  padding: 12px 16px;
-  background: white;
-  border-radius: 16px;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+  padding: 12px 18px;
+  background: rgba(220, 245, 230, 0.65);
+  border: 2px solid rgba(150, 210, 170, 0.6);
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  filter: drop-shadow(0 1px 6px rgba(160, 220, 180, 0.25));
   pointer-events: none;
   z-index: 10;
+  transform-origin: bottom center;
 }
 
 /* 底部三角尖角 */
 .speech-bubble::after {
   content: '';
   position: absolute;
-  bottom: -8px;
+  bottom: -10px;
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid white;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid rgba(220, 245, 230, 0.65);
 }
 
 .speech-bubble__text {
   font-size: 14px;
-  line-height: 1.5;
-  color: #333;
+  line-height: 1.6;
+  color: #4a5568;
+  font-weight: 500;
   word-break: break-word;
 }
 
-/* 进场动画 */
+/* 弹入动画 */
 .bubble-enter-active {
-  transition: all 0.3s ease-out;
+  animation: bubble-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* 退场动画 */
+/* 弹出动画 */
 .bubble-leave-active {
-  transition: all 0.25s ease-in;
+  animation: bubble-pop-out 0.3s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
-.bubble-enter-from {
-  opacity: 0;
-  transform: scale(0.8);
+@keyframes bubble-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(10px);
+  }
+  50% {
+    transform: scale(1.08) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
-.bubble-leave-to {
-  opacity: 0;
+@keyframes bubble-pop-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) translateY(10px);
+  }
 }
 </style>
