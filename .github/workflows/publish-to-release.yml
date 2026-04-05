@@ -46,6 +46,12 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: validate updater key
+        run: |
+          printf '%s' "${{ secrets.TAURI_PRIVATE_KEY }}" > /tmp/tauri.key
+          echo test > /tmp/tauri-sign-test.txt
+          pnpm tauri signer sign /tmp/tauri-sign-test.txt -f /tmp/tauri.key -p "${{ secrets.TAURI_KEY_PASSWORD }}"
+
       - uses: tauri-apps/tauri-action@v0.6.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

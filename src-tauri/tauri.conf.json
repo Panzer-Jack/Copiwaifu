@@ -47,7 +47,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwMDFDMzREMDM1QzU2MkIKUldRclZsd0RUY01CUUV4SlpxZXVWaVhSS1hYd2Nkay9RZEJINy93WGtDR2hYdWdEcWtab3NERHIK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI2NzcyOTgwRURGNDQyMUIKUldRYlF2VHRnQ2wzSnZCRlk4SFlpZzNuM3hwTXA5T1d1TU56Z0Z1RGQrNUhYTDNwQWtpMHJwVHoK",
       "endpoints": [
         "https://github.com/Panzer-Jack/Copiwaifu/releases/latest/download/latest.json"
       ]
