@@ -18,6 +18,7 @@ const ui = computed(() => getLanguageCopy(bootstrap.value?.settings.language ?? 
 let unlistenSettings: UnlistenFn | null = null
 let unlistenVisibility: UnlistenFn | null = null
 let hasCheckedForUpdates = false
+let updateCheckTimer: number | null = null
 
 async function loadBootstrap() {
   try {
@@ -49,9 +50,20 @@ async function maybeCheckForUpdates() {
   }
 }
 
+function scheduleUpdateCheck() {
+  if (updateCheckTimer !== null) {
+    window.clearTimeout(updateCheckTimer)
+  }
+
+  updateCheckTimer = window.setTimeout(() => {
+    updateCheckTimer = null
+    void maybeCheckForUpdates()
+  }, 3_000)
+}
+
 onMounted(async () => {
   await loadBootstrap()
-  void maybeCheckForUpdates()
+  scheduleUpdateCheck()
 
   unlistenSettings = await listen<AppBootstrap>('settings:updated', (event) => {
     bootstrap.value = event.payload
@@ -75,6 +87,9 @@ onUnmounted(() => {
   }
   if (unlistenVisibility) {
     void unlistenVisibility()
+  }
+  if (updateCheckTimer !== null) {
+    window.clearTimeout(updateCheckTimer)
   }
 })
 </script>

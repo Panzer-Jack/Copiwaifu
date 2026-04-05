@@ -4,6 +4,9 @@ import { check } from '@tauri-apps/plugin-updater'
 import { APP_LANGUAGE } from './types/agent'
 import type { AppLanguage } from './types/agent'
 
+const UPDATE_CHECK_MAX_ATTEMPTS = 3
+const UPDATE_CHECK_RETRY_DELAY_MS = 5_000
+
 type UpdateCopy = {
   availableTitle: string
   availableMessage: (version: string, date: string | null, notes: string | null) => string
@@ -59,10 +62,36 @@ function normalizeText(value: string | null | undefined) {
   return trimmed ? trimmed : null
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function checkWithRetry() {
+  let lastError: unknown = null
+
+  for (let attempt = 1; attempt <= UPDATE_CHECK_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      console.info(`[updater] checking for updates (attempt ${attempt}/${UPDATE_CHECK_MAX_ATTEMPTS})`)
+      return await check()
+    }
+    catch (error) {
+      lastError = error
+      console.warn(`[updater] update check failed on attempt ${attempt}`, error)
+
+      if (attempt < UPDATE_CHECK_MAX_ATTEMPTS) {
+        await wait(UPDATE_CHECK_RETRY_DELAY_MS)
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
 export async function checkForAppUpdates(language: AppLanguage) {
-  const update = await check()
+  const update = await checkWithRetry()
 
   if (!update) {
+    console.info('[updater] app is already up to date')
     return false
   }
 
@@ -82,6 +111,7 @@ export async function checkForAppUpdates(language: AppLanguage) {
   )
 
   if (!shouldInstall) {
+    console.info(`[updater] postponed update ${update.version}`)
     await update.close()
     return true
   }
