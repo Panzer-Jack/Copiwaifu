@@ -391,7 +391,7 @@ fn create_tray(app_handle: &AppHandle) -> tauri::Result<()> {
         .menu(&menu)
         .tooltip("Copiwaifu")
         .icon(icon)
-        .icon_as_template(true)
+        .icon_as_template(false)
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id().as_ref() {
             MENU_OPEN_SETTINGS => {
