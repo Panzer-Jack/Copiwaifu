@@ -2,17 +2,22 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { getLanguageCopy } from './i18n'
+import { checkForAppUpdates } from './updater'
 import MainWindow from './windows/MainWindow.vue'
 import SettingsWindow from './windows/SettingsWindow.vue'
+import { APP_LANGUAGE } from './types/agent'
 import type { AppBootstrap, WindowVisibilityPayload } from './types/agent'
 
 const windowLabel = ref(getCurrentWindow().label)
 const bootstrap = ref<AppBootstrap | null>(null)
 const errorMessage = ref('')
+const ui = computed(() => getLanguageCopy(bootstrap.value?.settings.language ?? APP_LANGUAGE.ENGLISH))
 
 let unlistenSettings: UnlistenFn | null = null
 let unlistenVisibility: UnlistenFn | null = null
+let hasCheckedForUpdates = false
 
 async function loadBootstrap() {
   try {
@@ -24,8 +29,29 @@ async function loadBootstrap() {
   }
 }
 
+async function maybeCheckForUpdates() {
+  if (
+    hasCheckedForUpdates
+    || import.meta.env.DEV
+    || windowLabel.value !== 'main'
+    || !bootstrap.value
+  ) {
+    return
+  }
+
+  hasCheckedForUpdates = true
+
+  try {
+    await checkForAppUpdates(bootstrap.value.settings.language ?? APP_LANGUAGE.ENGLISH)
+  }
+  catch (error) {
+    console.warn('failed to check for updates', error)
+  }
+}
+
 onMounted(async () => {
   await loadBootstrap()
+  void maybeCheckForUpdates()
 
   unlistenSettings = await listen<AppBootstrap>('settings:updated', (event) => {
     bootstrap.value = event.payload
@@ -77,7 +103,7 @@ onUnmounted(() => {
       v-if="errorMessage"
       class="status-card status-card--error"
     >
-      <h1>启动失败</h1>
+      <h1>{{ ui.status.launchFailed }}</h1>
       <p>{{ errorMessage }}</p>
     </div>
     <div
@@ -85,7 +111,7 @@ onUnmounted(() => {
       class="status-card"
     >
       <h1>Copiwaifu</h1>
-      <p>正在同步桌宠状态...</p>
+      <p>{{ ui.status.syncing }}</p>
     </div>
   </main>
 </template>

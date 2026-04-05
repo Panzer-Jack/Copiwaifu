@@ -7,6 +7,7 @@ import { Application, Ticker } from 'pixi.js'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import PetContextMenu from '../components/PetContextMenu.vue'
 import SpeechBubble from '../components/SpeechBubble.vue'
+import { formatAgentLabel, getLanguageCopy } from '../i18n'
 import { useAgentState } from '../composables/useAgentState'
 import { useSpeechBubble } from '../composables/useSpeechBubble'
 import { AGENT_STATE } from '../types/agent'
@@ -53,8 +54,9 @@ const activeModelUrl = computed(() => {
   return props.bootstrap.modelUrl
 })
 
+const ui = computed(() => getLanguageCopy(props.bootstrap.settings.language))
 const visibilityLabel = computed(() => (
-  props.bootstrap.mainWindowVisible ? 'Hide' : 'Show'
+  ui.value.visibilityLabel(props.bootstrap.mainWindowVisible)
 ))
 
 function closeMenu() {
@@ -73,29 +75,12 @@ function openMenu(event: MouseEvent) {
 }
 
 function greetingLines(name: string) {
-  return [
-    `${name} 在这里继续盯着你的 AI 会话。`,
-    `${name} 已待命，有需要随时喊我。`,
-    `${name} 会把工具状态和授权请求都看住。`,
-  ]
+  return ui.value.pet.greetings(name)
 }
 
 function randomGreeting() {
   const lines = greetingLines(props.bootstrap.settings.name)
   return lines[Math.floor(Math.random() * lines.length)]
-}
-
-function formatAgentLabel(agent: string | null) {
-  if (agent === 'claude-code') {
-    return 'Claude Code'
-  }
-  if (agent === 'copilot') {
-    return 'Copilot'
-  }
-  if (agent === 'codex') {
-    return 'Codex'
-  }
-  return 'AI'
 }
 
 function handleWindowKeydown(event: KeyboardEvent) {
@@ -172,16 +157,21 @@ async function animateForState(state: TAgentState) {
 }
 
 function bubbleTextForState(state: TAgentState) {
+  const name = props.bootstrap.settings.name
   if (state === AGENT_STATE.THINKING) {
-    return `${props.bootstrap.settings.name} 正在思考中...`
+    return ui.value.pet.thinking(name)
   }
   if (state === AGENT_STATE.TOOL_USE) {
-    return sessionInfo.value.toolName
-      ? `${props.bootstrap.settings.name} 正在执行：${sessionInfo.value.toolName}`
-      : `${props.bootstrap.settings.name} 正在执行操作...`
+    return ui.value.pet.toolUse(name, sessionInfo.value.toolName)
   }
   if (state === AGENT_STATE.ERROR) {
-    return `${props.bootstrap.settings.name} 捕获到一个错误。`
+    return ui.value.pet.error(name)
+  }
+  if (state === AGENT_STATE.COMPLETE) {
+    return ui.value.pet.complete(name)
+  }
+  if (state === AGENT_STATE.NEEDS_ATTENTION) {
+    return ui.value.pet.needsAttention(name)
   }
   return ''
 }
@@ -324,7 +314,13 @@ watch(currentState, (state, previous) => {
 
   if (state === AGENT_STATE.IDLE) {
     if (previous && previous !== AGENT_STATE.IDLE) {
-      say(`${formatAgentLabel(activeAgent.value)} 这轮处理完成了，${props.bootstrap.settings.name} 已接住。`, 2600)
+      say(
+        ui.value.pet.idleResume(
+          formatAgentLabel(activeAgent.value, props.bootstrap.settings.language),
+          props.bootstrap.settings.name,
+        ),
+        2600,
+      )
     }
     return
   }
@@ -351,7 +347,10 @@ watch(currentState, (state, previous) => {
       :visible="menuState.visible"
       :x="menuState.x"
       :y="menuState.y"
+      :close-label="ui.menu.close"
+      :settings-label="ui.menu.settings"
       :visibility-label="visibilityLabel"
+      :exit-label="ui.menu.exit"
       @close="closeMenu"
       @open-settings="openSettings"
       @toggle-visibility="toggleVisibility"

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <script>
+    var _hmt = _hmt || []
+    ;(function () {
+      var hm = document.createElement('script')
+      hm.src = 'https://hm.baidu.com/hm.js?86ce05ea92da7c785cfaeea9b856c1b2'
+      var s = document.getElementsByTagName('script')[0]
+      s.parentNode.insertBefore(hm, s)
+    })()
+  </script>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="https://blog.panzer-jack.cn/avatar.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>老船长PZ_Jack の 博客</title>
+    <link rel="alternate" type="application/rss+xml" title="老船长PZ_Jack の 博客" href="/rss.xml" />
+  </head>
+  <body>
+    <div class="hidden">
+      Total Page View <span id="vercount_value_page_pv">Loading</span>
+
+      Total Visits <span id="vercount_value_site_pv">Loading</span>
+
+      Site Total Visitors <span id="vercount_value_site_uv">Loading</span>
+    </div>
+    <div id="app"></div>
+    <script defer src="https://events.vercount.one/js"></script>
+    <script type="module" src="/src/main.ts"></script>
+    <script>
+      ;(function flexible(window, document) {
+        var docEl = document.documentElement
+        var dpr = window.devicePixelRatio || 1
+
+        // adjust body font size
+        function setBodyFontSize() {
+          if (document.body) {
+            document.body.style.fontSize = 12 * dpr + 'px'
+          } else {
+            document.addEventListener('DOMContentLoaded', setBodyFontSize)
+          }
+        }
+        setBodyFontSize()
+
+        // set 1rem = viewWidth / 10
+        function setRemUnit() {
+          var clientWidth = docEl.clientWidth > 540 ? 540 : docEl.clientWidth
+          var rem = clientWidth / 10
+          window.rem = rem
+          docEl.style.fontSize = rem + 'px'
+        }
+
+        setRemUnit()
+
+        // reset rem unit on page resize
+        window.addEventListener('resize', setRemUnit)
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted) {
+            setRemUnit()
+          }
+        })
+        window.addEventListener('load', setRemUnit)
+        // detect 0.5px supports
+        if (dpr >= 2) {
+          var fakeBody = document.createElement('body')
+          var testElement = document.createElement('div')
+          testElement.style.border = '.5px solid transparent'
+          fakeBody.appendChild(testElement)
+          docEl.appendChild(fakeBody)
+          if (testElement.offsetHeight === 1) {
+            docEl.classList.add('hairlines')
+          }
+          docEl.removeChild(fakeBody)
+        }
+      })(window, document)
+      window.__timingObj = {}
+    </script>
+  </body>
+</html>

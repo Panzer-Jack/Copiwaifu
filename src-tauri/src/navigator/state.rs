@@ -17,6 +17,9 @@ struct SessionRecord {
     state: AgentState,
     tool_name: Option<String>,
     summary: Option<String>,
+    working_directory: Option<String>,
+    session_title: Option<String>,
+    needs_attention: Option<bool>,
     updated_at: Instant,
 }
 
@@ -61,6 +64,9 @@ impl NavigatorState {
                 AgentState::Idle,
                 None,
                 None,
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                event.data.needs_attention,
                 now,
             ),
             EventType::SessionEnd => {
@@ -73,6 +79,9 @@ impl NavigatorState {
                 AgentState::Thinking,
                 event.data.tool_name.clone(),
                 event.data.summary.clone(),
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                event.data.needs_attention,
                 now,
             ),
             EventType::ToolUse => self.upsert_session(
@@ -81,6 +90,9 @@ impl NavigatorState {
                 AgentState::ToolUse,
                 event.data.tool_name.clone(),
                 event.data.summary.clone(),
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                event.data.needs_attention,
                 now,
             ),
             EventType::ToolResult => self.upsert_session(
@@ -89,6 +101,9 @@ impl NavigatorState {
                 AgentState::Thinking,
                 event.data.tool_name.clone(),
                 event.data.summary.clone(),
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                event.data.needs_attention,
                 now,
             ),
             EventType::Error => self.upsert_session(
@@ -97,14 +112,31 @@ impl NavigatorState {
                 AgentState::Error,
                 event.data.tool_name.clone(),
                 event.data.summary.clone(),
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                event.data.needs_attention,
                 now,
             ),
             EventType::Complete => self.upsert_session(
                 event.agent,
                 &event.session_id,
-                AgentState::Idle,
+                AgentState::Complete,
                 None,
                 event.data.summary.clone(),
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                event.data.needs_attention,
+                now,
+            ),
+            EventType::NeedsAttention => self.upsert_session(
+                event.agent,
+                &event.session_id,
+                AgentState::NeedsAttention,
+                event.data.tool_name.clone(),
+                event.data.summary.clone(),
+                event.data.working_directory.clone(),
+                event.data.session_title.clone(),
+                Some(true),
                 now,
             ),
         }
@@ -133,6 +165,9 @@ impl NavigatorState {
         state: AgentState,
         tool_name: Option<String>,
         summary: Option<String>,
+        working_directory: Option<String>,
+        session_title: Option<String>,
+        needs_attention: Option<bool>,
         now: Instant,
     ) {
         let key = session_key(&agent, session_id);
@@ -144,6 +179,9 @@ impl NavigatorState {
                 state,
                 tool_name,
                 summary,
+                working_directory,
+                session_title,
+                needs_attention,
                 updated_at: now,
             },
         );
@@ -183,6 +221,9 @@ impl NavigatorState {
                 session_id: Some(top.session_id.clone()),
                 tool_name: top.tool_name.clone(),
                 summary: top.summary.clone(),
+                working_directory: top.working_directory.clone(),
+                session_title: top.session_title.clone(),
+                needs_attention: top.needs_attention,
                 server_port: self.server_port,
             }
         } else {
@@ -192,6 +233,9 @@ impl NavigatorState {
                 session_id: None,
                 tool_name: None,
                 summary: None,
+                working_directory: None,
+                session_title: None,
+                needs_attention: None,
                 server_port: self.server_port,
             }
         }
@@ -200,7 +244,9 @@ impl NavigatorState {
 
 fn min_state_duration(state: AgentState) -> Duration {
     match state {
+        AgentState::NeedsAttention => Duration::ZERO,
         AgentState::Error => Duration::from_secs(2),
+        AgentState::Complete => Duration::from_secs(2),
         AgentState::ToolUse => Duration::from_secs(1),
         AgentState::Thinking => Duration::from_millis(1500),
         AgentState::Idle => Duration::ZERO,

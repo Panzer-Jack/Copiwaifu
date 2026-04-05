@@ -43,6 +43,19 @@ impl Default for WindowSizePreset {
     }
 }
 
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AppLanguage {
+    English,
+    Chinese,
+}
+
+impl Default for AppLanguage {
+    fn default() -> Self {
+        Self::English
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MotionGroupOption {
     pub id: String,
@@ -54,6 +67,7 @@ pub struct MotionGroupOption {
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub name: String,
+    pub language: AppLanguage,
     pub auto_start: bool,
     pub model_directory: Option<String>,
     pub window_size: WindowSizePreset,
@@ -63,7 +77,8 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            name: "Copiwaifu".to_string(),
+            name: "Yulia".to_string(),
+            language: AppLanguage::English,
             auto_start: false,
             model_directory: None,
             window_size: WindowSizePreset::Medium,
@@ -109,6 +124,7 @@ pub struct ShellStore(pub Arc<Mutex<ShellState>>);
 #[serde(rename_all = "camelCase")]
 struct PersistedAppSettings {
     name: Option<String>,
+    language: Option<AppLanguage>,
     auto_start: Option<bool>,
     model_directory: Option<String>,
     window_size: Option<WindowSizePreset>,
@@ -131,13 +147,23 @@ pub mod commands {
     }
 
     #[tauri::command]
-    pub fn scan_model_directory(path: String) -> Result<ModelScanResult, String> {
-        scan_model_directory_path(Path::new(&path), None)
+    pub fn scan_model_directory(
+        path: String,
+        language: Option<AppLanguage>,
+    ) -> Result<ModelScanResult, String> {
+        scan_model_directory_path(Path::new(&path), None, language.unwrap_or_default())
     }
 
     #[tauri::command]
-    pub fn scan_default_model(app_handle: AppHandle) -> Result<ModelScanResult, String> {
-        Ok(default_model_scan(&app_handle, None))
+    pub fn scan_default_model(
+        app_handle: AppHandle,
+        language: Option<AppLanguage>,
+    ) -> Result<ModelScanResult, String> {
+        Ok(default_model_scan(
+            &app_handle,
+            None,
+            language.unwrap_or_default(),
+        ))
     }
 
     #[tauri::command]
@@ -214,9 +240,9 @@ fn save_settings_inner(
     normalize_user_settings(&mut settings)?;
 
     let model_scan = if let Some(model_directory) = settings.model_directory.as_deref() {
-        scan_model_directory_path(Path::new(model_directory), None)?
+        scan_model_directory_path(Path::new(model_directory), None, settings.language)?
     } else {
-        default_model_scan(app_handle, None)
+        default_model_scan(app_handle, None, settings.language)
     };
 
     settings.action_group_bindings = sanitize_action_group_bindings(
@@ -248,16 +274,20 @@ fn load_shell_state(app_handle: &AppHandle) -> Result<ShellState, String> {
 
     let model_scan = match settings.model_directory.as_deref() {
         Some(model_directory) => {
-            match scan_model_directory_path(Path::new(model_directory), None) {
+            match scan_model_directory_path(Path::new(model_directory), None, settings.language) {
                 Ok(scan) => scan,
                 Err(err) => {
                     settings.model_directory = None;
                     settings.action_group_bindings = default_action_group_bindings();
-                    default_model_scan(app_handle, Some(format!("已回退默认模型：{err}")))
+                    default_model_scan(
+                        app_handle,
+                        Some(default_model_fallback_warning(settings.language, &err)),
+                        settings.language,
+                    )
                 }
             }
         }
-        None => default_model_scan(app_handle, None),
+        None => default_model_scan(app_handle, None, settings.language),
     };
 
     settings.action_group_bindings = sanitize_action_group_bindings(
@@ -292,6 +322,9 @@ fn merge_persisted_settings(persisted: PersistedAppSettings) -> AppSettings {
     if let Some(name) = persisted.name {
         settings.name = name;
     }
+    if let Some(language) = persisted.language {
+        settings.language = language;
+    }
     if let Some(auto_start) = persisted.auto_start {
         settings.auto_start = auto_start;
     }
@@ -323,10 +356,10 @@ fn normalize_loaded_settings(settings: &mut AppSettings) {
 fn normalize_user_settings(settings: &mut AppSettings) -> Result<(), String> {
     settings.name = settings.name.trim().to_string();
     if settings.name.is_empty() {
-        return Err("Name 不能为空".to_string());
+        return Err(name_required_message(settings.language));
     }
     if settings.name.chars().count() > NAME_MAX_LENGTH {
-        return Err(format!("Name 最多支持 {NAME_MAX_LENGTH} 个字符"));
+        return Err(name_too_long_message(settings.language, NAME_MAX_LENGTH));
     }
     settings.action_group_bindings =
         merge_action_group_bindings(settings.action_group_bindings.clone());
@@ -391,26 +424,32 @@ fn update_tray_menu(app_handle: &AppHandle) -> tauri::Result<()> {
 }
 
 fn tray_menu(app_handle: &AppHandle, visible: bool) -> tauri::menu::Menu<tauri::Wry> {
+    let language = current_language(app_handle);
     MenuBuilder::new(app_handle)
-        .text(MENU_OPEN_SETTINGS, "Setting")
-        .text(MENU_TOGGLE_VISIBILITY, visibility_menu_label(visible))
-        .text(MENU_EXIT, "Exit")
+        .text(MENU_OPEN_SETTINGS, settings_menu_label(language))
+        .text(
+            MENU_TOGGLE_VISIBILITY,
+            visibility_menu_label(visible, language),
+        )
+        .text(MENU_EXIT, exit_menu_label(language))
         .build()
         .expect("failed to build tray menu")
 }
 
-fn visibility_menu_label(visible: bool) -> &'static str {
-    if visible {
-        "Hide"
-    } else {
-        "Show"
-    }
+fn current_language(app_handle: &AppHandle) -> AppLanguage {
+    app_handle
+        .try_state::<ShellStore>()
+        .and_then(|shell| shell.0.lock().ok().map(|state| state.settings.language))
+        .unwrap_or_default()
 }
 
 fn open_or_focus_settings_window(app_handle: &AppHandle) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window(SETTINGS_WINDOW_LABEL) {
         window.show().map_err(|err| err.to_string())?;
         window.set_focus().map_err(|err| err.to_string())?;
+        window
+            .set_title(settings_window_title(current_language(app_handle)))
+            .map_err(|err| err.to_string())?;
         return Ok(());
     }
 
@@ -419,7 +458,7 @@ fn open_or_focus_settings_window(app_handle: &AppHandle) -> Result<(), String> {
         SETTINGS_WINDOW_LABEL,
         WebviewUrl::App("index.html".into()),
     )
-    .title("Copiwaifu Settings")
+    .title(settings_window_title(current_language(app_handle)))
     .inner_size(420.0, 620.0)
     .resizable(false)
     .focused(true)
@@ -468,6 +507,18 @@ fn emit_settings_updated(
     shell: &State<'_, ShellStore>,
     navigator: &State<'_, NavigatorStore>,
 ) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window(SETTINGS_WINDOW_LABEL) {
+        let language = shell
+            .0
+            .lock()
+            .map_err(|err| err.to_string())?
+            .settings
+            .language;
+        window
+            .set_title(settings_window_title(language))
+            .map_err(|err| err.to_string())?;
+    }
+
     let shell_state = shell.0.lock().map_err(|err| err.to_string())?;
     let payload = build_bootstrap(&shell_state, navigator);
     app_handle
@@ -575,12 +626,23 @@ fn sanitize_action_group_bindings(
         .collect()
 }
 
-fn agent_states() -> [&'static str; 4] {
-    ["idle", "thinking", "tool_use", "error"]
+fn agent_states() -> [&'static str; 6] {
+    [
+        "idle",
+        "thinking",
+        "tool_use",
+        "error",
+        "complete",
+        "needs_attention",
+    ]
 }
 
-fn default_model_scan(app_handle: &AppHandle, warning: Option<String>) -> ModelScanResult {
-    if let Some(mut scan) = try_scan_default_model(app_handle) {
+fn default_model_scan(
+    app_handle: &AppHandle,
+    warning: Option<String>,
+    language: AppLanguage,
+) -> ModelScanResult {
+    if let Some(mut scan) = try_scan_default_model(app_handle, language) {
         if warning.is_some() {
             scan.validation_message = warning;
         }
@@ -595,7 +657,10 @@ fn default_model_scan(app_handle: &AppHandle, warning: Option<String>) -> ModelS
     }
 }
 
-fn try_scan_default_model(app_handle: &AppHandle) -> Option<ModelScanResult> {
+fn try_scan_default_model(
+    app_handle: &AppHandle,
+    language: AppLanguage,
+) -> Option<ModelScanResult> {
     let candidates = [
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../public/Resources/Hiyori"),
         app_handle
@@ -608,7 +673,7 @@ fn try_scan_default_model(app_handle: &AppHandle) -> Option<ModelScanResult> {
 
     for candidate in candidates {
         if candidate.exists() {
-            if let Ok(scan) = scan_model_directory_path(&candidate, None) {
+            if let Ok(scan) = scan_model_directory_path(&candidate, None, language) {
                 return Some(scan);
             }
         }
@@ -620,12 +685,13 @@ fn try_scan_default_model(app_handle: &AppHandle) -> Option<ModelScanResult> {
 pub fn scan_model_directory_path(
     directory: &Path,
     validation_message: Option<String>,
+    language: AppLanguage,
 ) -> Result<ModelScanResult, String> {
     if !directory.exists() {
-        return Err("模型目录不存在".to_string());
+        return Err(model_directory_not_found_message(language));
     }
     if !directory.is_dir() {
-        return Err("请选择模型目录".to_string());
+        return Err(select_model_directory_message(language));
     }
 
     let mut entries = fs::read_dir(directory)
@@ -643,17 +709,17 @@ pub fn scan_model_directory_path(
     entries.sort();
 
     if entries.is_empty() {
-        return Err("目录顶层缺少 *.model3.json".to_string());
+        return Err(missing_model_entry_message(language));
     }
     if entries.len() > 1 {
-        return Err("目录顶层存在多个 *.model3.json".to_string());
+        return Err(multiple_model_entries_message(language));
     }
 
     let entry_file = entries.remove(0);
     let entry_name = entry_file
         .file_name()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| "模型入口文件名无效".to_string())?
+        .ok_or_else(|| invalid_model_entry_name_message(language))?
         .to_string();
 
     let raw = fs::read_to_string(&entry_file).map_err(|err| err.to_string())?;
@@ -661,17 +727,22 @@ pub fn scan_model_directory_path(
     let file_refs = json
         .get("FileReferences")
         .and_then(|value| value.as_object())
-        .ok_or_else(|| "model3.json 缺少 FileReferences".to_string())?;
+        .ok_or_else(|| missing_file_references_message(language))?;
 
     let mut motion_groups = Vec::new();
 
-    validate_declared_file(directory, file_refs.get("Moc"))?;
-    validate_declared_file(directory, file_refs.get("Physics"))?;
-    validate_declared_file(directory, file_refs.get("Pose"))?;
-    validate_declared_file(directory, file_refs.get("UserData"))?;
-    validate_texture_files(directory, file_refs.get("Textures"))?;
-    validate_expression_files(directory, file_refs.get("Expressions"))?;
-    validate_motion_files(directory, file_refs.get("Motions"), &mut motion_groups)?;
+    validate_declared_file(directory, file_refs.get("Moc"), language)?;
+    validate_declared_file(directory, file_refs.get("Physics"), language)?;
+    validate_declared_file(directory, file_refs.get("Pose"), language)?;
+    validate_declared_file(directory, file_refs.get("UserData"), language)?;
+    validate_texture_files(directory, file_refs.get("Textures"), language)?;
+    validate_expression_files(directory, file_refs.get("Expressions"), language)?;
+    validate_motion_files(
+        directory,
+        file_refs.get("Motions"),
+        &mut motion_groups,
+        language,
+    )?;
 
     Ok(ModelScanResult {
         model_entry_file: entry_name,
@@ -684,16 +755,18 @@ pub fn scan_model_directory_path(
 fn validate_declared_file(
     directory: &Path,
     value: Option<&serde_json::Value>,
+    language: AppLanguage,
 ) -> Result<(), String> {
     let Some(path) = value.and_then(|value| value.as_str()) else {
         return Ok(());
     };
-    ensure_model_resource_exists(directory, path)
+    ensure_model_resource_exists(directory, path, language)
 }
 
 fn validate_texture_files(
     directory: &Path,
     value: Option<&serde_json::Value>,
+    language: AppLanguage,
 ) -> Result<(), String> {
     let Some(files) = value.and_then(|value| value.as_array()) else {
         return Ok(());
@@ -702,8 +775,8 @@ fn validate_texture_files(
     for file in files {
         let path = file
             .as_str()
-            .ok_or_else(|| "Textures 配置格式无效".to_string())?;
-        ensure_model_resource_exists(directory, path)?;
+            .ok_or_else(|| invalid_textures_config_message(language))?;
+        ensure_model_resource_exists(directory, path, language)?;
     }
 
     Ok(())
@@ -712,6 +785,7 @@ fn validate_texture_files(
 fn validate_expression_files(
     directory: &Path,
     value: Option<&serde_json::Value>,
+    language: AppLanguage,
 ) -> Result<(), String> {
     let Some(expressions) = value.and_then(|value| value.as_array()) else {
         return Ok(());
@@ -719,7 +793,7 @@ fn validate_expression_files(
 
     for expression in expressions {
         if let Some(path) = expression.get("File").and_then(|value| value.as_str()) {
-            ensure_model_resource_exists(directory, path)?;
+            ensure_model_resource_exists(directory, path, language)?;
         }
     }
 
@@ -730,6 +804,7 @@ fn validate_motion_files(
     directory: &Path,
     value: Option<&serde_json::Value>,
     motion_groups: &mut Vec<MotionGroupOption>,
+    language: AppLanguage,
 ) -> Result<(), String> {
     let Some(groups) = value.and_then(|value| value.as_object()) else {
         return Ok(());
@@ -739,11 +814,11 @@ fn validate_motion_files(
     for (group_name, items) in groups {
         let array = items
             .as_array()
-            .ok_or_else(|| format!("动作组 {group_name} 配置格式无效"))?;
+            .ok_or_else(|| invalid_motion_group_message(language, group_name))?;
 
         for item in array {
             if let Some(path) = item.get("File").and_then(|value| value.as_str()) {
-                ensure_model_resource_exists(directory, path)?;
+                ensure_model_resource_exists(directory, path, language)?;
             }
         }
 
@@ -759,35 +834,169 @@ fn validate_motion_files(
     Ok(())
 }
 
-fn ensure_model_resource_exists(directory: &Path, relative_path: &str) -> Result<(), String> {
-    let path = join_safe(directory, relative_path)?;
+fn ensure_model_resource_exists(
+    directory: &Path,
+    relative_path: &str,
+    language: AppLanguage,
+) -> Result<(), String> {
+    let path = join_safe(directory, relative_path, language)?;
     if path.exists() {
         return Ok(());
     }
-    Err(format!("模型资源缺失：{relative_path}"))
+    Err(model_resource_missing_message(language, relative_path))
 }
 
 pub fn resolve_model_resource_path(
     directory: &Path,
     relative_path: &str,
 ) -> Result<PathBuf, String> {
-    let path = join_safe(directory, relative_path)?;
+    let path = join_safe(directory, relative_path, AppLanguage::English)?;
     if path.is_file() {
         return Ok(path);
     }
-    Err("模型资源不存在".to_string())
+    Err(model_resource_not_found_message(AppLanguage::English))
 }
 
-fn join_safe(base: &Path, relative_path: &str) -> Result<PathBuf, String> {
+fn join_safe(base: &Path, relative_path: &str, language: AppLanguage) -> Result<PathBuf, String> {
     let mut path = base.to_path_buf();
     for component in Path::new(relative_path).components() {
         match component {
             Component::CurDir => {}
             Component::Normal(segment) => path.push(segment),
-            _ => return Err("模型路径非法".to_string()),
+            _ => return Err(invalid_model_path_message(language)),
         }
     }
     Ok(path)
+}
+
+fn settings_window_title(language: AppLanguage) -> &'static str {
+    match language {
+        AppLanguage::English => "Copiwaifu Settings",
+        AppLanguage::Chinese => "Copiwaifu 设置",
+    }
+}
+
+fn settings_menu_label(language: AppLanguage) -> &'static str {
+    match language {
+        AppLanguage::English => "Settings",
+        AppLanguage::Chinese => "设置",
+    }
+}
+
+fn exit_menu_label(language: AppLanguage) -> &'static str {
+    match language {
+        AppLanguage::English => "Exit",
+        AppLanguage::Chinese => "退出",
+    }
+}
+
+fn visibility_menu_label(visible: bool, language: AppLanguage) -> &'static str {
+    match (visible, language) {
+        (true, AppLanguage::English) => "Hide",
+        (false, AppLanguage::English) => "Show",
+        (true, AppLanguage::Chinese) => "隐藏",
+        (false, AppLanguage::Chinese) => "显示",
+    }
+}
+
+fn name_required_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "Name cannot be empty.".to_string(),
+        AppLanguage::Chinese => "名字不能为空。".to_string(),
+    }
+}
+
+fn name_too_long_message(language: AppLanguage, max_length: usize) -> String {
+    match language {
+        AppLanguage::English => format!("Name can be up to {max_length} characters."),
+        AppLanguage::Chinese => format!("名字最多支持 {max_length} 个字符。"),
+    }
+}
+
+fn default_model_fallback_warning(language: AppLanguage, error: &str) -> String {
+    match language {
+        AppLanguage::English => format!("Reverted to the built-in default model: {error}"),
+        AppLanguage::Chinese => format!("已回退默认模型：{error}"),
+    }
+}
+
+fn model_directory_not_found_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "Model directory does not exist.".to_string(),
+        AppLanguage::Chinese => "模型目录不存在".to_string(),
+    }
+}
+
+fn select_model_directory_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "Please choose a model directory.".to_string(),
+        AppLanguage::Chinese => "请选择模型目录".to_string(),
+    }
+}
+
+fn missing_model_entry_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "The folder root is missing a *.model3.json file.".to_string(),
+        AppLanguage::Chinese => "目录顶层缺少 *.model3.json".to_string(),
+    }
+}
+
+fn multiple_model_entries_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => {
+            "The folder root contains multiple *.model3.json files.".to_string()
+        }
+        AppLanguage::Chinese => "目录顶层存在多个 *.model3.json".to_string(),
+    }
+}
+
+fn invalid_model_entry_name_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "Invalid model entry filename.".to_string(),
+        AppLanguage::Chinese => "模型入口文件名无效".to_string(),
+    }
+}
+
+fn missing_file_references_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "model3.json is missing FileReferences.".to_string(),
+        AppLanguage::Chinese => "model3.json 缺少 FileReferences".to_string(),
+    }
+}
+
+fn invalid_textures_config_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "The Textures config is invalid.".to_string(),
+        AppLanguage::Chinese => "Textures 配置格式无效".to_string(),
+    }
+}
+
+fn invalid_motion_group_message(language: AppLanguage, group_name: &str) -> String {
+    match language {
+        AppLanguage::English => format!("Motion group {group_name} has an invalid config."),
+        AppLanguage::Chinese => format!("动作组 {group_name} 配置格式无效"),
+    }
+}
+
+fn model_resource_missing_message(language: AppLanguage, relative_path: &str) -> String {
+    match language {
+        AppLanguage::English => format!("Missing model resource: {relative_path}"),
+        AppLanguage::Chinese => format!("模型资源缺失：{relative_path}"),
+    }
+}
+
+fn model_resource_not_found_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "Model resource does not exist.".to_string(),
+        AppLanguage::Chinese => "模型资源不存在".to_string(),
+    }
+}
+
+fn invalid_model_path_message(language: AppLanguage) -> String {
+    match language {
+        AppLanguage::English => "Illegal model path.".to_string(),
+        AppLanguage::Chinese => "模型路径非法".to_string(),
+    }
 }
 
 fn sync_autostart(app_handle: &AppHandle, enabled: bool) -> Result<(), String> {

@@ -1,0 +1,32 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  /* IE 和早期 Edge */
+  -ms-overflow-style: none;
+
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* Chrome、Safari、新版 Edge */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+img {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+img {
+  pointer-events: none; /* 彻底禁用鼠标事件，含右键 */
+}
+
+:root {
+  font-family: 'special-common', 'PingFang SC';
+}

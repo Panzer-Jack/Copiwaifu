@@ -3,7 +3,10 @@ defineProps<{
   visible: boolean
   x: number
   y: number
+  closeLabel: string
+  settingsLabel: string
   visibilityLabel: string
+  exitLabel: string
 }>()
 
 defineEmits<{
@@ -27,7 +30,7 @@ defineEmits<{
         type="button"
         @click="$emit('close')"
       >
-        Close Menu
+        {{ closeLabel }}
       </button>
       <div class="menu__divider" />
       <button
@@ -35,7 +38,7 @@ defineEmits<{
         type="button"
         @click="$emit('openSettings')"
       >
-        Setting
+        {{ settingsLabel }}
       </button>
       <button
         class="menu__item"
@@ -49,7 +52,7 @@ defineEmits<{
         type="button"
         @click="$emit('exit')"
       >
-        Exit
+        {{ exitLabel }}
       </button>
     </div>
   </Transition>

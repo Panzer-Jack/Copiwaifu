@@ -3,9 +3,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open } from '@tauri-apps/plugin-dialog'
 import { computed, reactive, ref, watch } from 'vue'
+import { getLanguageCopy } from '../i18n'
 import {
-  AGENT_STATE_LABEL,
   AGENT_STATE_ORDER,
+  APP_LANGUAGE,
   WINDOW_SIZE_PRESET,
   createEmptyActionGroupBindings,
 } from '../types/agent'
@@ -23,6 +24,8 @@ const modelMessage = ref('')
 
 const form = reactive<AppSettings>(createFormState(props.bootstrap.settings))
 const currentScan = ref<ModelScanResult>(props.bootstrap.modelScan)
+const ui = computed(() => getLanguageCopy(form.language))
+const NAME_MAX_LENGTH = 16
 
 const motionGroupOptions = computed(() => currentScan.value.availableMotionGroups)
 const currentWindow = getCurrentWindow()
@@ -39,6 +42,7 @@ watch(() => props.bootstrap.modelScan, (scan) => {
 function createFormState(settings: AppSettings): AppSettings {
   return {
     name: settings.name,
+    language: settings.language,
     autoStart: settings.autoStart,
     modelDirectory: settings.modelDirectory,
     windowSize: settings.windowSize,
@@ -52,6 +56,7 @@ function createFormState(settings: AppSettings): AppSettings {
 function applySettings(settings: AppSettings) {
   const next = createFormState(settings)
   form.name = next.name
+  form.language = next.language
   form.autoStart = next.autoStart
   form.modelDirectory = next.modelDirectory
   form.windowSize = next.windowSize
@@ -72,9 +77,11 @@ async function resetToDefaultModel() {
   isScanning.value = true
 
   try {
-    const scan = await invoke<ModelScanResult>('scan_default_model')
+    const scan = await invoke<ModelScanResult>('scan_default_model', {
+      language: form.language,
+    })
     currentScan.value = scan
-    modelMessage.value = '将切换回内置默认模型。'
+    modelMessage.value = ui.value.settings.switchedToDefaultModel
 
     const availableIds = new Set(scan.availableMotionGroups.map(option => option.id))
     for (const state of AGENT_STATE_ORDER) {
@@ -99,7 +106,7 @@ async function pickModelDirectory() {
     directory: true,
     multiple: false,
     defaultPath: form.modelDirectory ?? undefined,
-    title: '选择 Live2D 模型目录',
+    title: ui.value.settings.chooseModelDirectoryTitle,
   })
 
   if (typeof selected !== 'string') {
@@ -110,11 +117,12 @@ async function pickModelDirectory() {
   try {
     const scan = await invoke<ModelScanResult>('scan_model_directory', {
       path: selected,
+      language: form.language,
     })
 
     form.modelDirectory = selected
     currentScan.value = scan
-    modelMessage.value = '模型目录校验通过。'
+    modelMessage.value = ui.value.settings.modelValidated
 
     const availableIds = new Set(scan.availableMotionGroups.map(option => option.id))
     for (const state of AGENT_STATE_ORDER) {
@@ -138,11 +146,11 @@ async function save() {
 
   const trimmedName = form.name.trim()
   if (!trimmedName) {
-    errorMessage.value = 'Name 不能为空。'
+    errorMessage.value = ui.value.settings.nameRequired
     return
   }
-  if ([...trimmedName].length > 16) {
-    errorMessage.value = 'Name 最多支持 16 个字符。'
+  if ([...trimmedName].length > NAME_MAX_LENGTH) {
+    errorMessage.value = ui.value.settings.nameTooLong(NAME_MAX_LENGTH)
     return
   }
 
@@ -157,7 +165,7 @@ async function save() {
       },
     })
 
-    successMessage.value = '设置已保存并立即生效。'
+    successMessage.value = ui.value.settings.saveSuccess
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
@@ -180,19 +188,19 @@ function setActionGroupBinding(state: TAgentState, value: string) {
   <div class="settings">
     <header class="settings__hero">
       <p class="settings__eyebrow">
-        Copiwaifu
+        {{ ui.settings.eyebrow }}
       </p>
-      <h1>桌宠设置</h1>
+      <h1>{{ ui.settings.title }}</h1>
       <p class="settings__description">
-        控制名字、模型、尺寸和状态动作组绑定。保存后主窗口会立即同步。
+        {{ ui.settings.description }}
       </p>
     </header>
 
     <section class="settings__panel">
       <label class="field field--switch">
         <span>
-          <strong>Auto Start</strong>
-          <small>保存后同步系统开机自启状态。</small>
+          <strong>{{ ui.settings.autoStartLabel }}</strong>
+          <small>{{ ui.settings.autoStartHint }}</small>
         </span>
         <input
           v-model="form.autoStart"
@@ -201,21 +209,36 @@ function setActionGroupBinding(state: TAgentState, value: string) {
       </label>
 
       <label class="field">
-        <span class="field__label">Name</span>
+        <span class="field__label">{{ ui.settings.languageLabel }}</span>
+        <select
+          v-model="form.language"
+          class="field__select"
+        >
+          <option :value="APP_LANGUAGE.ENGLISH">
+            English
+          </option>
+          <option :value="APP_LANGUAGE.CHINESE">
+            中文
+          </option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span class="field__label">{{ ui.settings.nameLabel }}</span>
         <input
           v-model="form.name"
           class="field__input"
-          maxlength="16"
+          :maxlength="NAME_MAX_LENGTH"
           type="text"
-          placeholder="Copiwaifu"
+          :placeholder="ui.settings.namePlaceholder"
         >
         <small class="field__hint">
-          当前 {{ [...form.name].length }}/16
+          {{ ui.settings.nameCount([...form.name].length, NAME_MAX_LENGTH) }}
         </small>
       </label>
 
       <div class="field">
-        <span class="field__label">Upload Model</span>
+        <span class="field__label">{{ ui.settings.uploadModelLabel }}</span>
         <div class="model-picker">
           <button
             class="button"
@@ -223,18 +246,18 @@ function setActionGroupBinding(state: TAgentState, value: string) {
             type="button"
             @click="pickModelDirectory"
           >
-            {{ isScanning ? '校验中...' : '选择目录' }}
+            {{ isScanning ? ui.settings.validating : ui.settings.chooseDirectory }}
           </button>
           <button
             class="button button--secondary"
             type="button"
             @click="resetToDefaultModel"
           >
-            使用默认模型
+            {{ ui.settings.useDefaultModel }}
           </button>
         </div>
         <p class="field__path">
-          {{ form.modelDirectory || '当前使用内置 Hiyori 模型' }}
+          {{ form.modelDirectory || ui.settings.builtInModelPath }}
         </p>
         <p
           v-if="modelMessage"
@@ -245,7 +268,7 @@ function setActionGroupBinding(state: TAgentState, value: string) {
       </div>
 
       <div class="field">
-        <span class="field__label">Window Size</span>
+        <span class="field__label">{{ ui.settings.windowSizeLabel }}</span>
         <div class="size-grid">
           <label class="choice">
             <input
@@ -253,7 +276,7 @@ function setActionGroupBinding(state: TAgentState, value: string) {
               :value="WINDOW_SIZE_PRESET.SMALL"
               type="radio"
             >
-            <span>小</span>
+            <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.SMALL] }}</span>
           </label>
           <label class="choice">
             <input
@@ -261,7 +284,7 @@ function setActionGroupBinding(state: TAgentState, value: string) {
               :value="WINDOW_SIZE_PRESET.MEDIUM"
               type="radio"
             >
-            <span>中</span>
+            <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.MEDIUM] }}</span>
           </label>
           <label class="choice">
             <input
@@ -269,27 +292,27 @@ function setActionGroupBinding(state: TAgentState, value: string) {
               :value="WINDOW_SIZE_PRESET.LARGE"
               type="radio"
             >
-            <span>大</span>
+            <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.LARGE] }}</span>
           </label>
         </div>
       </div>
 
       <div class="field">
-        <span class="field__label">Action Group Binding / 动作组绑定</span>
+        <span class="field__label">{{ ui.settings.actionGroupBindingLabel }}</span>
         <div class="binding-list">
           <label
             v-for="state in AGENT_STATE_ORDER"
             :key="state"
             class="binding-row"
           >
-            <span>{{ AGENT_STATE_LABEL[state] }}</span>
+            <span>{{ ui.stateLabels[state] }}</span>
             <select
               class="field__select"
               :value="form.actionGroupBindings[state] ?? ''"
               @change="setActionGroupBinding(state, ($event.target as HTMLSelectElement).value)"
             >
               <option value="">
-                不绑定
+                {{ ui.settings.noBinding }}
               </option>
               <option
                 v-for="option in motionGroupOptions"
@@ -323,7 +346,7 @@ function setActionGroupBinding(state: TAgentState, value: string) {
         type="button"
         @click="cancel"
       >
-        Cancel
+        {{ ui.settings.cancel }}
       </button>
       <button
         class="button"
@@ -331,7 +354,7 @@ function setActionGroupBinding(state: TAgentState, value: string) {
         type="button"
         @click="save"
       >
-        {{ isSaving ? 'Saving...' : 'Save' }}
+        {{ isSaving ? ui.settings.saving : ui.settings.save }}
       </button>
     </footer>
   </div>

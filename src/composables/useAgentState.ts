@@ -12,10 +12,16 @@ export function useAgentState() {
     sessionId: string | null
     toolName: string | null
     summary: string | null
+    workingDirectory: string | null
+    sessionTitle: string | null
+    needsAttention: boolean
   }>({
     sessionId: null,
     toolName: null,
     summary: null,
+    workingDirectory: null,
+    sessionTitle: null,
+    needsAttention: false,
   })
 
   let unlisten: UnlistenFn | null = null
@@ -28,6 +34,9 @@ export function useAgentState() {
       sessionId: payload.session_id ?? null,
       toolName: payload.tool_name ?? null,
       summary: payload.summary ?? null,
+      workingDirectory: payload.working_directory ?? null,
+      sessionTitle: payload.session_title ?? null,
+      needsAttention: payload.needs_attention ?? false,
     }
   }
 

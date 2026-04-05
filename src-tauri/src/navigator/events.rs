@@ -28,6 +28,7 @@ pub enum EventType {
     ToolResult,
     Error,
     Complete,
+    NeedsAttention,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -37,12 +38,16 @@ pub enum AgentState {
     Thinking,
     ToolUse,
     Error,
+    Complete,
+    NeedsAttention,
 }
 
 impl AgentState {
     pub fn priority(&self) -> u8 {
         match self {
+            Self::NeedsAttention => 5,
             Self::Error => 4,
+            Self::Complete => 3,
             Self::ToolUse => 3,
             Self::Thinking => 2,
             Self::Idle => 1,
@@ -56,6 +61,12 @@ pub struct EventData {
     pub tool_name: Option<String>,
     #[serde(default)]
     pub summary: Option<String>,
+    #[serde(default)]
+    pub working_directory: Option<String>,
+    #[serde(default)]
+    pub session_title: Option<String>,
+    #[serde(default)]
+    pub needs_attention: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -84,6 +95,12 @@ pub struct IncomingHookEvent {
     pub tool_name: Option<String>,
     #[serde(default)]
     pub summary: Option<String>,
+    #[serde(default)]
+    pub working_directory: Option<String>,
+    #[serde(default)]
+    pub session_title: Option<String>,
+    #[serde(default)]
+    pub needs_attention: Option<bool>,
 }
 
 impl IncomingHookEvent {
@@ -107,6 +124,15 @@ impl IncomingHookEvent {
         }
         if data.summary.is_none() {
             data.summary = self.summary;
+        }
+        if data.working_directory.is_none() {
+            data.working_directory = self.working_directory;
+        }
+        if data.session_title.is_none() {
+            data.session_title = self.session_title;
+        }
+        if data.needs_attention.is_none() {
+            data.needs_attention = self.needs_attention;
         }
 
         Ok(AgentEvent {
@@ -133,6 +159,8 @@ fn event_type_from_state(state: AgentState) -> EventType {
         AgentState::Thinking => EventType::Thinking,
         AgentState::ToolUse => EventType::ToolUse,
         AgentState::Error => EventType::Error,
+        AgentState::Complete => EventType::Complete,
+        AgentState::NeedsAttention => EventType::NeedsAttention,
     }
 }
 
@@ -145,6 +173,7 @@ fn parse_event_type(value: &str) -> Result<EventType, String> {
         "tool_result" | "PostToolUse" | "postToolUse" => EventType::ToolResult,
         "error" | "PostToolUseFailure" | "StopFailure" | "errorOccurred" => EventType::Error,
         "complete" | "Stop" | "agentStop" | "Notification" | "notification" => EventType::Complete,
+        "permission_request" | "PermissionRequest" | "needs_attention" => EventType::NeedsAttention,
         "Elicitation" | "SubagentStart" | "subagentStart" | "SubagentStop" | "subagentStop"
         | "PreCompact" | "preCompact" | "PostCompact" | "WorktreeCreate" => EventType::ToolUse,
         other => return Err(format!("unsupported event: {other}")),
@@ -164,6 +193,12 @@ pub struct StateChangePayload {
     pub tool_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub needs_attention: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub server_port: Option<u16>,
 }
