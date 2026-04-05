@@ -8,7 +8,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "run": "pnpm tauri dev"
+    "run": "pnpm tauri dev",
+    "release": "release-it",
+    "release:sync-version": "node scripts/sync-release-version.mjs"
   },
   "dependencies": {
     "@panzerjack/eslint-config": "^3.0.0",
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-vue": "^5.2.1",
+    "release-it": "^19.0.3",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vue-tsc": "^2.1.10"

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/release-it/schema/release-it.json",
+  "git": {
+    "commitMessage": "chore: release app-v${version}",
+    "tagName": "app-v${version}"
+  },
+  "npm": {
+    "publish": false
+  },
+  "hooks": {
+    "after:bump": "node scripts/sync-release-version.mjs ${version}"
+  }
+}

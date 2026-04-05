@@ -2,12 +2,12 @@ name: 'publish'
 
 on:
   push:
-    branches:
-      - release
+    tags:
+      - 'app-v*'
   workflow_dispatch:
 
-# This is the example from the readme.
-# On each push to the `release` branch it will create or update a GitHub release, build your app, and upload the artifacts to the release.
+# On each push to an `app-v*` tag it will create or update a GitHub release,
+# build the app, and upload the artifacts to the release.
 
 jobs:
   publish-tauri:
