@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import main from '@/assets/images/main.png'
 
+const repositoryHref = 'https://github.com/Panzer-Jack/Copiwaifu'
+const latestReleaseHref = `${repositoryHref}/releases/latest`
+
 const highlights = [
   {
     title: 'AI Session Sync',
@@ -33,15 +36,15 @@ const moments = [
 
 const downloads = [
   {
-    title: 'Latest Release',
-    description: 'Open GitHub Releases and grab the installer for your platform.',
-    href: 'https://github.com/Panzer-Jack/Copiwaifu/releases/latest',
-    label: 'Download Copiwaifu',
+    title: 'Mac Download',
+    description: 'Open the latest GitHub release for Copiwaifu on macOS.',
+    href: latestReleaseHref,
+    label: 'Download for macOS',
   },
   {
     title: 'Source Repository',
     description: 'Browse the codebase, release notes, and ongoing development.',
-    href: 'https://github.com/Panzer-Jack/Copiwaifu',
+    href: repositoryHref,
     label: 'View GitHub',
   },
 ]
@@ -89,15 +92,15 @@ const downloads = [
 
           <div class="mt-22px flex flex-wrap gap-12px">
             <a
-              href="https://github.com/Panzer-Jack/Copiwaifu/releases/latest"
+              :href="latestReleaseHref"
               target="_blank"
               rel="noreferrer"
               class="inline-flex items-center justify-center rounded-full bg-[#f3c98b] px-20px py-12px text-14px font-700 text-[#1d140d] no-underline transition-all duration-300 hover:translate-y-[-1px] hover:bg-[#ffd8a6]"
             >
-              Download the latest release
+              Download for macOS
             </a>
             <a
-              href="https://github.com/Panzer-Jack/Copiwaifu"
+              :href="repositoryHref"
               target="_blank"
               rel="noreferrer"
               class="inline-flex items-center justify-center rounded-full border border-white/14 bg-white/5 px-20px py-12px text-14px font-600 text-white no-underline transition-all duration-300 hover:border-white/26 hover:bg-white/10"
@@ -251,7 +254,7 @@ const downloads = [
               Download Copiwaifu and start syncing your AI desktop presence.
             </h2>
             <p class="mt-14px max-w-620px text-15px leading-26px text-[#d3c7df]">
-              The app ships through Tauri builds. Open the latest release, choose the installer for your platform, and launch it. In-app updating is already wired in for future upgrades.
+              The app ships through Tauri macOS builds. Open the latest release, choose the installer for your MacBook, and launch it. In-app updating is already wired in for future upgrades.
             </p>
           </div>
 
@@ -261,7 +264,7 @@ const downloads = [
             </p>
             <ol class="mt-12px list-decimal pl-20px text-14px leading-26px text-[#ece3f7]">
               <li>Open the latest release page.</li>
-              <li>Pick the installer that matches your platform.</li>
+              <li>Pick the macOS installer that matches your Mac chip.</li>
               <li>Launch Copiwaifu and connect it to your AI coding workflow.</li>
             </ol>
           </div>
