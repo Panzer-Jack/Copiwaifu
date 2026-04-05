@@ -120,15 +120,13 @@ async function syncLive2DSize() {
 }
 
 function resolveMotionGroup(state: TAgentState): string | null {
-  const availableGroups = new Set(props.bootstrap.modelScan.availableMotionGroups.map(group => group.id))
-  const direct = props.bootstrap.settings.actionGroupBindings[state]
-  if (direct && availableGroups.has(direct)) {
+  const direct = props.bootstrap.settings.actionGroupBindings[state]?.trim()
+  if (direct) {
     return direct
   }
 
-  const idleFallback = props.bootstrap.settings.actionGroupBindings[AGENT_STATE.IDLE]
-  if (idleFallback && availableGroups.has(idleFallback)) {
-    return idleFallback
+  if (state !== AGENT_STATE.IDLE) {
+    return props.bootstrap.settings.actionGroupBindings[AGENT_STATE.IDLE]?.trim() || null
   }
 
   return null

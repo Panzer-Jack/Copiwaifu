@@ -27,7 +27,6 @@ const currentScan = ref<ModelScanResult>(props.bootstrap.modelScan)
 const ui = computed(() => getLanguageCopy(form.language))
 const NAME_MAX_LENGTH = 16
 
-const motionGroupOptions = computed(() => currentScan.value.availableMotionGroups)
 const currentWindow = getCurrentWindow()
 
 watch(() => props.bootstrap.settings, (settings) => {
@@ -82,14 +81,6 @@ async function resetToDefaultModel() {
     })
     currentScan.value = scan
     modelMessage.value = ui.value.settings.switchedToDefaultModel
-
-    const availableIds = new Set(scan.availableMotionGroups.map(option => option.id))
-    for (const state of AGENT_STATE_ORDER) {
-      const binding = form.actionGroupBindings[state]
-      if (binding && !availableIds.has(binding)) {
-        form.actionGroupBindings[state] = null
-      }
-    }
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
@@ -123,14 +114,6 @@ async function pickModelDirectory() {
     form.modelDirectory = selected
     currentScan.value = scan
     modelMessage.value = ui.value.settings.modelValidated
-
-    const availableIds = new Set(scan.availableMotionGroups.map(option => option.id))
-    for (const state of AGENT_STATE_ORDER) {
-      const binding = form.actionGroupBindings[state]
-      if (binding && !availableIds.has(binding)) {
-        form.actionGroupBindings[state] = null
-      }
-    }
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
@@ -180,7 +163,8 @@ function cancel() {
 }
 
 function setActionGroupBinding(state: TAgentState, value: string) {
-  form.actionGroupBindings[state] = value || null
+  const trimmedValue = value.trim()
+  form.actionGroupBindings[state] = trimmedValue || null
 }
 </script>
 
@@ -306,22 +290,13 @@ function setActionGroupBinding(state: TAgentState, value: string) {
             class="binding-row"
           >
             <span>{{ ui.stateLabels[state] }}</span>
-            <select
-              class="field__select"
+            <input
+              class="field__input"
               :value="form.actionGroupBindings[state] ?? ''"
-              @change="setActionGroupBinding(state, ($event.target as HTMLSelectElement).value)"
+              :placeholder="ui.settings.noBinding"
+              type="text"
+              @input="setActionGroupBinding(state, ($event.target as HTMLInputElement).value)"
             >
-              <option value="">
-                {{ ui.settings.noBinding }}
-              </option>
-              <option
-                v-for="option in motionGroupOptions"
-                :key="option.id"
-                :value="option.id"
-              >
-                {{ option.label }}
-              </option>
-            </select>
           </label>
         </div>
       </div>

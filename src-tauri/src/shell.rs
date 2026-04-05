@@ -610,17 +610,14 @@ fn merge_action_group_bindings(
 
 fn sanitize_action_group_bindings(
     bindings: &BTreeMap<String, Option<String>>,
-    motion_groups: &[MotionGroupOption],
+    _motion_groups: &[MotionGroupOption],
 ) -> BTreeMap<String, Option<String>> {
-    let available_ids = motion_groups
-        .iter()
-        .map(|motion_group| motion_group.id.clone())
-        .collect::<BTreeSet<_>>();
-
     merge_action_group_bindings(bindings.clone())
         .into_iter()
         .map(|(state, binding)| {
-            let next_binding = binding.filter(|value| available_ids.contains(value));
+            let next_binding = binding
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty());
             (state, next_binding)
         })
         .collect()
@@ -661,15 +658,7 @@ fn try_scan_default_model(
     app_handle: &AppHandle,
     language: AppLanguage,
 ) -> Option<ModelScanResult> {
-    let candidates = [
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../public/Resources/Hiyori"),
-        app_handle
-            .path()
-            .resource_dir()
-            .ok()
-            .map(|dir| dir.join("Resources/Hiyori"))
-            .unwrap_or_default(),
-    ];
+    let candidates = default_model_directory_candidates(app_handle);
 
     for candidate in candidates {
         if candidate.exists() {
@@ -680,6 +669,38 @@ fn try_scan_default_model(
     }
 
     None
+}
+
+fn default_model_directory_candidates(app_handle: &AppHandle) -> Vec<PathBuf> {
+    let mut candidates = vec![
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../public/Resources/Hiyori"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../dist/Resources/Hiyori"),
+    ];
+
+    if let Ok(resource_dir) = app_handle.path().resource_dir() {
+        candidates.extend([
+            resource_dir.join("Resources/Hiyori"),
+            resource_dir.join("assets/Resources/Hiyori"),
+            resource_dir.join("dist/Resources/Hiyori"),
+            resource_dir.join("../Resources/Hiyori"),
+        ]);
+    }
+
+    if let Ok(executable_path) = std::env::current_exe() {
+        if let Some(executable_dir) = executable_path.parent() {
+            candidates.extend([
+                executable_dir.join("../Resources/Hiyori"),
+                executable_dir.join("../resources/Resources/Hiyori"),
+                executable_dir.join("Resources/Hiyori"),
+            ]);
+        }
+    }
+
+    let mut seen = BTreeSet::new();
+    candidates
+        .into_iter()
+        .filter(|path| seen.insert(path.clone()))
+        .collect()
 }
 
 pub fn scan_model_directory_path(
