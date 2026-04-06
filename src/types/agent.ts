@@ -53,6 +53,7 @@ export interface AppBootstrap {
   modelScan: ModelScanResult
   modelUrl: string
   mainWindowVisible: boolean
+  appVersion: string
 }
 
 export interface WindowVisibilityPayload {

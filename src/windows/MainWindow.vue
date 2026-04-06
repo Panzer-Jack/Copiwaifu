@@ -45,6 +45,7 @@ const MENU_EDGE_GAP = 12
 Config.MotionGroupIdle = 'Idle'
 Config.ViewScale = 2.5
 Config.CubismLoggingLevel = LogLevel.LogLevel_Off
+Config.MouseFollow = true
 
 const activeModelUrl = computed(() => {
   if (props.bootstrap.settings.modelDirectory && serverPort.value) {

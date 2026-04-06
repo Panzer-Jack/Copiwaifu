@@ -178,6 +178,10 @@ function setActionGroupBinding(state: TAgentState, value: string) {
       <p class="settings__description">
         {{ ui.settings.description }}
       </p>
+      <p class="settings__version">
+        <span>{{ ui.settings.versionLabel }}</span>
+        <strong>{{ props.bootstrap.appVersion }}</strong>
+      </p>
     </header>
 
     <section class="settings__panel">
@@ -365,6 +369,25 @@ function setActionGroupBinding(state: TAgentState, value: string) {
   color: #4f6362;
   font-size: 14px;
   line-height: 1.6;
+}
+
+.settings__version {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(70, 107, 105, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: #5f7472;
+  font-size: 12px;
+  width: fit-content;
+}
+
+.settings__version strong {
+  color: #28413f;
+  font-size: 13px;
 }
 
 .settings__panel {

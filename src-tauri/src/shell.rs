@@ -104,6 +104,7 @@ pub struct AppBootstrap {
     pub model_scan: ModelScanResult,
     pub model_url: String,
     pub main_window_visible: bool,
+    pub app_version: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -138,12 +139,12 @@ pub mod commands {
 
     #[tauri::command]
     pub fn get_app_bootstrap(
-        _app_handle: AppHandle,
+        app_handle: AppHandle,
         shell: State<'_, ShellStore>,
         navigator: State<'_, NavigatorStore>,
     ) -> Result<AppBootstrap, String> {
         let shell_state = shell.0.lock().map_err(|err| err.to_string())?;
-        Ok(build_bootstrap(&shell_state, &navigator))
+        Ok(build_bootstrap(&app_handle, &shell_state, &navigator))
     }
 
     #[tauri::command]
@@ -184,7 +185,7 @@ pub mod commands {
     ) -> Result<AppBootstrap, String> {
         open_or_focus_settings_window(&app_handle)?;
         let shell_state = shell.0.lock().map_err(|err| err.to_string())?;
-        Ok(build_bootstrap(&shell_state, &navigator))
+        Ok(build_bootstrap(&app_handle, &shell_state, &navigator))
     }
 
     #[tauri::command]
@@ -265,7 +266,7 @@ fn save_settings_inner(
     emit_settings_updated(app_handle, shell, navigator)?;
 
     let shell_state = shell.0.lock().map_err(|err| err.to_string())?;
-    Ok(build_bootstrap(&shell_state, navigator))
+    Ok(build_bootstrap(app_handle, &shell_state, navigator))
 }
 
 fn load_shell_state(app_handle: &AppHandle) -> Result<ShellState, String> {
@@ -499,7 +500,7 @@ fn toggle_main_window_visibility_inner(
         .map_err(|err| err.to_string())?;
 
     let shell_state = shell.0.lock().map_err(|err| err.to_string())?;
-    Ok(build_bootstrap(&shell_state, navigator))
+    Ok(build_bootstrap(app_handle, &shell_state, navigator))
 }
 
 fn emit_settings_updated(
@@ -520,13 +521,14 @@ fn emit_settings_updated(
     }
 
     let shell_state = shell.0.lock().map_err(|err| err.to_string())?;
-    let payload = build_bootstrap(&shell_state, navigator);
+    let payload = build_bootstrap(app_handle, &shell_state, navigator);
     app_handle
         .emit(SETTINGS_UPDATED_EVENT, payload)
         .map_err(|err| err.to_string())
 }
 
 fn build_bootstrap(
+    app_handle: &AppHandle,
     shell_state: &ShellState,
     navigator: &State<'_, NavigatorStore>,
 ) -> AppBootstrap {
@@ -547,6 +549,7 @@ fn build_bootstrap(
             &shell_state.model_scan.model_entry_file,
         ),
         main_window_visible: shell_state.main_window_visible,
+        app_version: app_handle.package_info().version.to_string(),
     }
 }
 

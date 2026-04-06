@@ -20,6 +20,7 @@ type LanguageCopy = {
     eyebrow: string
     title: string
     description: string
+    versionLabel: string
     autoStartLabel: string
     autoStartHint: string
     languageLabel: string
@@ -73,6 +74,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       eyebrow: 'Copiwaifu',
       title: 'Pet Settings',
       description: 'Manage the name, language, model, size, and motion bindings. Changes apply immediately.',
+      versionLabel: 'Version',
       autoStartLabel: 'Auto Start',
       autoStartHint: 'Sync launch at login after saving.',
       languageLabel: 'Language',
@@ -141,6 +143,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       eyebrow: 'Copiwaifu',
       title: '桌宠设置',
       description: '控制名字、语言、模型、尺寸和状态动作组绑定。保存后主窗口会立即同步。',
+      versionLabel: '当前版本',
       autoStartLabel: '开机自启',
       autoStartHint: '保存后同步系统开机自启状态。',
       languageLabel: '语言',
