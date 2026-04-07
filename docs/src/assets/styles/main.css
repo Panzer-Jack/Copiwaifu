@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -28,5 +30,31 @@ img {
 }
 
 :root {
-  font-family: 'special-common', 'PingFang SC';
+  font-family: 'Outfit', 'M PLUS Rounded 1c', 'PingFang SC', sans-serif;
+  color: #2f4e70;
+  background: #eef7ff;
+}
+
+html {
+  background: #eef7ff;
+}
+
+body {
+  min-width: 320px;
+  background: #eef7ff;
+  color: #2f4e70;
+}
+
+a,
+button {
+  font: inherit;
+}
+
+.font-display {
+  font-family: 'M PLUS Rounded 1c', 'Outfit', 'PingFang SC', sans-serif;
+}
+
+::selection {
+  background: rgba(146, 191, 231, 0.4);
+  color: #1f3852;
 }

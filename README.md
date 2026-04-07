@@ -10,6 +10,14 @@ Copiwaifu is a Tauri desktop pet that mirrors the state of your AI coding tools 
 
 - Copiwaifu: https://copiwaifu.panzer-jack.cn/
 
+## After Installing On macOS（important！！！）
+
+After moving the app into `/Applications`, run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/copiwaifu.app
+```
+
 ## What It Does
 
 - Shows a Live2D desktop companion that reacts to AI session state changes.
@@ -75,14 +83,6 @@ pnpm run
 
 ```bash
 pnpm tauri dev
-```
-
-## After Installing On macOS
-
-After moving the app into `/Applications`, run:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/copiwaifu.app
 ```
 
 ## Available Scripts
