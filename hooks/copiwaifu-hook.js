@@ -37,9 +37,6 @@ function normalizeEvent(ev) {
   return null
 }
 
-const mappedEvent = normalizeEvent(rawEvent)
-if (!mappedEvent) process.exit(0)
-
 const PORT_FILES = [path.join(os.homedir(), '.copiwaifu', 'port'), '/tmp/copiwaifu-port']
 const SESSION_DIR = path.join(os.homedir(), '.copiwaifu', 'sessions')
 const HOOKS_FILE = path.join(os.homedir(), '.copiwaifu', 'hooks', 'original-hooks.json')
@@ -62,6 +59,8 @@ function handle(input) {
   rawInput = input
 
   const ctx = parseJson(input)
+  const mappedEvent = resolveMappedEvent(ctx)
+  if (!mappedEvent) return process.exit(0)
   const sessionId = ctx.session_id || ctx.sessionId || ctx['thread-id'] || `${agent}-${process.ppid}`
   const toolName = ctx.tool_name || ctx.toolName || ctx.name || agent
   const summary = resolveSummary(ctx, agent)
@@ -115,18 +114,21 @@ function chainHook(ag, ev, input) {
     const hooks = parseJson(tryRead(HOOKS_FILE))
     const agentHooks = hooks[ag]
     if (!agentHooks) return
-    if (ag === 'codex') {
-      const cmd = agentHooks[ev]
-      if (!Array.isArray(cmd) || !cmd.length) return
-      spawn(cmd[0], cmd.slice(1).concat([input]), { stdio: 'ignore', detached: true }).unref()
-    } else {
-      const entry = agentHooks[ev] || agentHooks[rawEvent]
-      if (!entry?.command) return
-      const child = spawn(entry.command, { shell: true, stdio: ['pipe', 'ignore', 'ignore'], detached: true })
-      child.stdin.end(input)
-      child.unref()
-    }
+    // Claude/Copilot already support multiple hook entries natively.
+    // Replaying their saved hooks here causes duplicate execution.
+    if (ag !== 'codex') return
+
+    const cmd = agentHooks[ev]
+    if (!Array.isArray(cmd) || !cmd.length) return
+    spawn(cmd[0], cmd.slice(1).concat([input]), { stdio: 'ignore', detached: true }).unref()
   } catch {}
+}
+
+function resolveMappedEvent(ctx) {
+  if (agent === 'codex' && rawEvent === 'notify') {
+    return normalizeEvent(ctx.type || rawEvent)
+  }
+  return normalizeEvent(rawEvent)
 }
 
 function resolveSessionTitle(ctx) {

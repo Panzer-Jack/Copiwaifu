@@ -2,13 +2,22 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { confirm } from '@tauri-apps/plugin-dialog'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getLanguageCopy } from './i18n'
-import { checkForAppUpdates } from './updater'
+import {
+  AppUpdateError,
+  checkForAppUpdates,
+  MANUAL_UPDATE_WEBSITE_URL,
+} from './updater'
 import MainWindow from './windows/MainWindow.vue'
 import SettingsWindow from './windows/SettingsWindow.vue'
 import { APP_LANGUAGE } from './types/agent'
 import type { AppBootstrap, WindowVisibilityPayload } from './types/agent'
+
+const INITIAL_UPDATE_CHECK_DELAY_MS = 3_000
+const FAILED_UPDATE_CHECK_RETRY_DELAY_MS = 60_000
 
 const windowLabel = ref(getCurrentWindow().label)
 const bootstrap = ref<AppBootstrap | null>(null)
@@ -36,21 +45,56 @@ async function maybeCheckForUpdates() {
     || import.meta.env.DEV
     || windowLabel.value !== 'main'
     || !bootstrap.value
+    || !bootstrap.value.mainWindowVisible
   ) {
     return
   }
 
-  hasCheckedForUpdates = true
-
   try {
     await checkForAppUpdates(bootstrap.value.settings.language ?? APP_LANGUAGE.ENGLISH)
+    hasCheckedForUpdates = true
   }
   catch (error) {
     console.warn('failed to check for updates', error)
+    hasCheckedForUpdates = false
+    await promptManualUpdate(error)
+    scheduleUpdateCheck(FAILED_UPDATE_CHECK_RETRY_DELAY_MS)
   }
 }
 
-function scheduleUpdateCheck() {
+async function promptManualUpdate(error: unknown) {
+  if (!bootstrap.value?.mainWindowVisible) {
+    return
+  }
+
+  const updaterCopy = ui.value.updater
+  const isInstallError = error instanceof AppUpdateError && error.code === 'install'
+  const shouldOpenWebsite = await confirm(
+    [
+      isInstallError ? updaterCopy.installFailedMessage : updaterCopy.checkFailedMessage,
+      updaterCopy.manualDownloadMessage,
+    ].join('\n\n'),
+    {
+      title: isInstallError ? updaterCopy.installFailedTitle : updaterCopy.checkFailedTitle,
+      kind: 'warning',
+      okLabel: updaterCopy.openWebsite,
+      cancelLabel: updaterCopy.retryLater,
+    },
+  )
+
+  if (!shouldOpenWebsite) {
+    return
+  }
+
+  try {
+    await openUrl(MANUAL_UPDATE_WEBSITE_URL)
+  }
+  catch (openError) {
+    console.warn('failed to open manual update website', openError)
+  }
+}
+
+function scheduleUpdateCheck(delayMs = INITIAL_UPDATE_CHECK_DELAY_MS) {
   if (updateCheckTimer !== null) {
     window.clearTimeout(updateCheckTimer)
   }
@@ -58,7 +102,7 @@ function scheduleUpdateCheck() {
   updateCheckTimer = window.setTimeout(() => {
     updateCheckTimer = null
     void maybeCheckForUpdates()
-  }, 3_000)
+  }, delayMs)
 }
 
 onMounted(async () => {
@@ -77,6 +121,10 @@ onMounted(async () => {
     bootstrap.value = {
       ...bootstrap.value,
       mainWindowVisible: event.payload.visible,
+    }
+
+    if (event.payload.visible && !hasCheckedForUpdates) {
+      scheduleUpdateCheck()
     }
   })
 })

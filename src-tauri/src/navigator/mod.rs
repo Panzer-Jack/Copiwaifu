@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{App, AppHandle, Emitter, Manager};
 
 pub mod agent;
+mod codex_activity;
 pub mod commands;
 pub mod events;
 mod hook_helpers;
@@ -26,6 +27,7 @@ pub fn init(app: &mut App) {
 
     app.manage(NavigatorStore(state.clone()));
     server::start(app.handle().clone(), state.clone());
+    codex_activity::start(app.handle().clone(), state.clone());
     agent::start_cleanup_loop(app.handle().clone(), state);
 
     if let Err(err) = hook_installer::install_hooks() {

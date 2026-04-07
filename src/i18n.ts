@@ -16,6 +16,15 @@ type LanguageCopy = {
     settings: string
     exit: string
   }
+  updater: {
+    checkFailedTitle: string
+    checkFailedMessage: string
+    installFailedTitle: string
+    installFailedMessage: string
+    manualDownloadMessage: string
+    openWebsite: string
+    retryLater: string
+  }
   settings: {
     eyebrow: string
     title: string
@@ -54,11 +63,11 @@ type LanguageCopy = {
   visibilityLabel: (visible: boolean) => string
   pet: {
     greetings: (name: string) => string[]
-    thinking: (name: string) => string
-    toolUse: (name: string, toolName: string | null) => string
-    error: (name: string) => string
-    complete: (name: string) => string
-    needsAttention: (name: string) => string
+    thinking: (agentLabel: string, name: string) => string
+    toolUse: (agentLabel: string, name: string, toolName: string | null) => string
+    error: (agentLabel: string, name: string) => string
+    complete: (agentLabel: string, name: string) => string
+    needsAttention: (agentLabel: string, name: string) => string
     idleResume: (agentLabel: string, name: string) => string
   }
 }
@@ -69,6 +78,15 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       close: 'Close Menu',
       settings: 'Settings',
       exit: 'Exit',
+    },
+    updater: {
+      checkFailedTitle: 'Update Check Failed',
+      checkFailedMessage: 'Copiwaifu could not reach the update server. It will retry automatically later.',
+      installFailedTitle: 'Update Install Failed',
+      installFailedMessage: 'Copiwaifu found an update, but downloading or installing it failed. Please try again later.',
+      manualDownloadMessage: 'You can also download the latest package manually from the official website.',
+      openWebsite: 'Open Website',
+      retryLater: 'Retry Later',
     },
     settings: {
       eyebrow: 'Copiwaifu',
@@ -123,13 +141,13 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
         `${name} is on standby. Call me when you need me.`,
         `${name} is watching your tools and approval prompts.`,
       ],
-      thinking: name => `${name} is thinking...`,
-      toolUse: (name, toolName) => toolName
-        ? `${name} is running: ${toolName}`
-        : `${name} is working...`,
-      error: name => `${name} ran into an error.`,
-      complete: name => `${name} finished the task!`,
-      needsAttention: name => `${name} needs your attention!`,
+      thinking: (agentLabel, name) => `[${agentLabel}] ${name} is thinking...`,
+      toolUse: (agentLabel, name, toolName) => toolName
+        ? `[${agentLabel}] ${name} is running: ${toolName}`
+        : `[${agentLabel}] ${name} is working...`,
+      error: (agentLabel, name) => `[${agentLabel}] ${name} ran into an error.`,
+      complete: (agentLabel, name) => `[${agentLabel}] ${name} finished the task!`,
+      needsAttention: (agentLabel, name) => `[${agentLabel}] ${name} needs your attention!`,
       idleResume: (agentLabel, name) => `${agentLabel} wrapped up this turn. ${name} is back on it.`,
     },
   },
@@ -138,6 +156,15 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       close: '关闭菜单',
       settings: '设置',
       exit: '退出',
+    },
+    updater: {
+      checkFailedTitle: '检查更新失败',
+      checkFailedMessage: 'Copiwaifu 暂时无法连接更新服务器，稍后会自动重试。',
+      installFailedTitle: '安装更新失败',
+      installFailedMessage: 'Copiwaifu 已发现新版本，但下载或安装过程中失败，请稍后再试。',
+      manualDownloadMessage: '你也可以前往官网手动下载最新安装包。',
+      openWebsite: '打开官网',
+      retryLater: '稍后重试',
     },
     settings: {
       eyebrow: 'Copiwaifu',
@@ -192,13 +219,13 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
         `${name} 已待命，有需要随时喊我。`,
         `${name} 会把工具状态和授权请求都看住。`,
       ],
-      thinking: name => `${name} 正在思考中...`,
-      toolUse: (name, toolName) => toolName
-        ? `${name} 正在执行：${toolName}`
-        : `${name} 正在执行操作...`,
-      error: name => `${name} 捕获到一个错误。`,
-      complete: name => `${name} 完成了任务！`,
-      needsAttention: name => `${name} 需要你的关注！`,
+      thinking: (agentLabel, name) => `[${agentLabel}] ${name} 正在思考中...`,
+      toolUse: (agentLabel, name, toolName) => toolName
+        ? `[${agentLabel}] ${name} 正在执行：${toolName}`
+        : `[${agentLabel}] ${name} 正在执行操作...`,
+      error: (agentLabel, name) => `[${agentLabel}] ${name} 捕获到一个错误。`,
+      complete: (agentLabel, name) => `[${agentLabel}] ${name} 完成了任务！`,
+      needsAttention: (agentLabel, name) => `[${agentLabel}] ${name} 需要你的关注！`,
       idleResume: (agentLabel, name) => `${agentLabel} 这轮处理完成了，${name} 已接住。`,
     },
   },

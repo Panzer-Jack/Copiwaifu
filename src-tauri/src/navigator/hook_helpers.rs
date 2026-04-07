@@ -83,16 +83,47 @@ pub fn cmd_has_marker(v: &Value) -> bool {
 
 // ── TOML helpers (no toml crate) ──────────────────────────────────────────────
 
-pub fn toml_find_notify(content: &str) -> Option<&str> {
-    content
-        .lines()
-        .find(|l| l.trim_start().starts_with("notify = ["))
+/// Find the top-level notify value span, handling both single-line and multi-line arrays.
+/// Returns `Some((start_line_idx, end_line_idx))` (inclusive).
+fn toml_notify_span(lines: &[&str]) -> Option<(usize, usize)> {
+    let mut start = None;
+    for (idx, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('[') {
+            break;
+        }
+        if trimmed.starts_with("notify") {
+            start = Some(idx);
+            break;
+        }
+    }
+    let start = start?;
+    let first = lines[start];
+    // Single-line: notify = [...] on one line
+    if first.contains('[') && first.contains(']') {
+        return Some((start, start));
+    }
+    // Multi-line: find the closing ']'
+    for (i, line) in lines.iter().enumerate().skip(start) {
+        if line.contains(']') {
+            return Some((start, i));
+        }
+    }
+    // Unclosed bracket — treat as single line to avoid eating the whole file
+    Some((start, start))
 }
 
-pub fn toml_parse_array(line: &str) -> Vec<String> {
-    let start = line.find('[').unwrap_or(0) + 1;
-    let end = line.rfind(']').unwrap_or(line.len());
-    line[start..end]
+/// Extract the full notify value text (may span multiple lines).
+pub fn toml_find_notify(content: &str) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    let (start, end) = toml_notify_span(&lines)?;
+    Some(lines[start..=end].join("\n"))
+}
+
+pub fn toml_parse_array(text: &str) -> Vec<String> {
+    let start = text.find('[').unwrap_or(0) + 1;
+    let end = text.rfind(']').unwrap_or(text.len());
+    text[start..end]
         .split(',')
         .filter_map(|s| {
             let t = s.trim().trim_matches('"');
@@ -111,34 +142,66 @@ pub fn toml_build_notify(args: &[String]) -> String {
 }
 
 pub fn toml_upsert_notify(content: &str, new_line: &str) -> String {
-    if content
-        .lines()
-        .any(|l| l.trim_start().starts_with("notify = ["))
-    {
-        content
-            .lines()
-            .map(|l| {
-                if l.trim_start().starts_with("notify = [") {
-                    new_line.to_string()
-                } else {
-                    l.to_string()
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+    let lines: Vec<&str> = content.lines().collect();
+    if let Some((start, end)) = toml_notify_span(&lines) {
+        let mut result: Vec<String> = Vec::with_capacity(lines.len());
+        result.extend(lines[..start].iter().map(|l| l.to_string()));
+        result.push(new_line.to_string());
+        result.extend(lines[end + 1..].iter().map(|l| l.to_string()));
+        result.join("\n")
     } else if content.is_empty() {
         new_line.to_string()
     } else {
-        format!("{}\n{}", content.trim_end(), new_line)
+        let insert_at = lines
+            .iter()
+            .position(|line| line.trim_start().starts_with('['))
+            .unwrap_or(lines.len());
+        let mut result: Vec<String> = Vec::with_capacity(lines.len() + 1);
+        result.extend(lines[..insert_at].iter().map(|l| l.to_string()));
+        result.push(new_line.to_string());
+        result.extend(lines[insert_at..].iter().map(|l| l.to_string()));
+        result.join("\n")
     }
 }
 
 pub fn toml_remove_notify(content: &str) -> String {
-    content
-        .lines()
-        .filter(|l| !l.trim_start().starts_with("notify = ["))
-        .collect::<Vec<_>>()
-        .join("\n")
+    let lines: Vec<&str> = content.lines().collect();
+    if let Some((start, end)) = toml_notify_span(&lines) {
+        let mut result: Vec<String> = Vec::with_capacity(lines.len());
+        result.extend(lines[..start].iter().map(|l| l.to_string()));
+        result.extend(lines[end + 1..].iter().map(|l| l.to_string()));
+        result.join("\n")
+    } else {
+        content.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{toml_find_notify, toml_remove_notify, toml_upsert_notify};
+
+    #[test]
+    fn upsert_notify_inserts_before_first_table() {
+        let content = "model = \"gpt-5\"\n\n[projects.\"/tmp\"]\ntrust_level = \"trusted\"";
+        let updated = toml_upsert_notify(content, "notify = [\"node\", \"hook.js\"]");
+
+        assert_eq!(
+            updated,
+            "model = \"gpt-5\"\n\nnotify = [\"node\", \"hook.js\"]\n[projects.\"/tmp\"]\ntrust_level = \"trusted\""
+        );
+    }
+
+    #[test]
+    fn notify_helpers_ignore_nested_notify_keys() {
+        let content = "[profiles.default]\nnotify = [\"nested\"]\n";
+
+        assert!(toml_find_notify(content).is_none());
+        assert_eq!(toml_remove_notify(content), content);
+        assert_eq!(
+            toml_upsert_notify(content, "notify = [\"node\", \"hook.js\"]"),
+            "notify = [\"node\", \"hook.js\"]\n[profiles.default]\nnotify = [\"nested\"]"
+        );
+    }
 }
 
 // ── Backup ────────────────────────────────────────────────────────────────────
@@ -188,7 +251,7 @@ pub fn backup_existing_hooks() -> Result<(), String> {
     if codex_path.exists() {
         let content = fs::read_to_string(&codex_path).unwrap_or_default();
         if let Some(line) = toml_find_notify(&content) {
-            let args = toml_parse_array(line);
+            let args = toml_parse_array(&line);
             if !args.iter().any(|a| a.contains(SOURCE_MARKER)) && !args.is_empty() {
                 let arr: Vec<Value> = args.into_iter().map(|a| json!(a)).collect();
                 backup["codex"]["notify"] = Value::Array(arr);

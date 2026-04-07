@@ -6,6 +6,19 @@ import type { AppLanguage } from './types/agent'
 
 const UPDATE_CHECK_MAX_ATTEMPTS = 3
 const UPDATE_CHECK_RETRY_DELAY_MS = 5_000
+export const MANUAL_UPDATE_WEBSITE_URL = 'https://copiwaifu.panzer-jack.cn/'
+
+export class AppUpdateError extends Error {
+  code: 'check' | 'install'
+  cause?: unknown
+
+  constructor(code: 'check' | 'install', message: string, cause?: unknown) {
+    super(message)
+    this.name = 'AppUpdateError'
+    this.code = code
+    this.cause = cause
+  }
+}
 
 type UpdateCopy = {
   availableTitle: string
@@ -84,7 +97,11 @@ async function checkWithRetry() {
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+  throw new AppUpdateError(
+    'check',
+    'Failed to check for updates',
+    lastError instanceof Error ? lastError : new Error(String(lastError)),
+  )
 }
 
 export async function checkForAppUpdates(language: AppLanguage) {
@@ -119,24 +136,30 @@ export async function checkForAppUpdates(language: AppLanguage) {
   let downloaded = 0
   let contentLength = 0
 
-  await update.downloadAndInstall((event) => {
-    switch (event.event) {
-      case 'Started':
-        contentLength = event.data.contentLength ?? 0
-        console.info(`[updater] started downloading ${contentLength} bytes`)
-        break
-      case 'Progress':
-        downloaded += event.data.chunkLength
-        console.info(`[updater] downloaded ${downloaded} / ${contentLength}`)
-        break
-      case 'Finished':
-        console.info('[updater] download finished')
-        break
-    }
-  })
+  try {
+    await update.downloadAndInstall((event) => {
+      switch (event.event) {
+        case 'Started':
+          contentLength = event.data.contentLength ?? 0
+          console.info(`[updater] started downloading ${contentLength} bytes`)
+          break
+        case 'Progress':
+          downloaded += event.data.chunkLength
+          console.info(`[updater] downloaded ${downloaded} / ${contentLength}`)
+          break
+        case 'Finished':
+          console.info('[updater] download finished')
+          break
+      }
+    })
 
-  console.info(`[updater] installed version ${update.version}`)
-  await update.close()
-  await relaunch()
+    console.info(`[updater] installed version ${update.version}`)
+    await update.close()
+    await relaunch()
+  }
+  catch (error) {
+    throw new AppUpdateError('install', `Failed to install update ${update.version}`, error)
+  }
+
   return true
 }

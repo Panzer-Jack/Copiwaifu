@@ -157,20 +157,21 @@ async function animateForState(state: TAgentState) {
 
 function bubbleTextForState(state: TAgentState) {
   const name = props.bootstrap.settings.name
+  const agentLabel = formatAgentLabel(activeAgent.value, props.bootstrap.settings.language)
   if (state === AGENT_STATE.THINKING) {
-    return ui.value.pet.thinking(name)
+    return ui.value.pet.thinking(agentLabel, name)
   }
   if (state === AGENT_STATE.TOOL_USE) {
-    return ui.value.pet.toolUse(name, sessionInfo.value.toolName)
+    return ui.value.pet.toolUse(agentLabel, name, sessionInfo.value.toolName)
   }
   if (state === AGENT_STATE.ERROR) {
-    return ui.value.pet.error(name)
+    return ui.value.pet.error(agentLabel, name)
   }
   if (state === AGENT_STATE.COMPLETE) {
-    return ui.value.pet.complete(name)
+    return ui.value.pet.complete(agentLabel, name)
   }
   if (state === AGENT_STATE.NEEDS_ATTENTION) {
-    return ui.value.pet.needsAttention(name)
+    return ui.value.pet.needsAttention(agentLabel, name)
   }
   return ''
 }
