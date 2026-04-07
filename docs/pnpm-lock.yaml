@@ -47,6 +47,9 @@ importers:
       pinia:
         specifier: ^3.0.3
         version: 3.0.4(typescript@5.8.3)(vue@3.5.27(typescript@5.8.3))
+      pixi.js:
+        specifier: ^8.17.1
+        version: 8.17.1
       prismjs:
         specifier: ^1.30.0
         version: 1.30.0

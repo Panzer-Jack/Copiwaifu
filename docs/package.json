@@ -24,6 +24,7 @@
     "markdown-it-table-of-contents": "^1.1.0",
     "nprogress": "^0.2.0",
     "pinia": "^3.0.3",
+    "pixi.js": "^8.17.1",
     "prismjs": "^1.30.0",
     "reading-time": "^1.5.0",
     "vue": "^3.5.18",
