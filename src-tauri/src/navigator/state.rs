@@ -198,7 +198,16 @@ impl NavigatorState {
 
             if let Some(last_at) = self.last_snapshot_at {
                 let min_dur = min_state_duration(last.state);
-                if now.duration_since(last_at) < min_dur {
+                let resumed_work_after_complete = matches!(last.state, AgentState::Complete)
+                    && matches!(
+                        raw.state,
+                        AgentState::Thinking
+                            | AgentState::ToolUse
+                            | AgentState::NeedsAttention
+                            | AgentState::Error
+                    );
+
+                if !resumed_work_after_complete && now.duration_since(last_at) < min_dur {
                     return vec![];
                 }
             }
@@ -250,5 +259,49 @@ fn min_state_duration(state: AgentState) -> Duration {
         AgentState::ToolUse => Duration::from_secs(1),
         AgentState::Thinking => Duration::from_millis(1500),
         AgentState::Idle => Duration::ZERO,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::events::{AgentEvent, AgentState, AgentType, EventData, EventType};
+    use super::{NavigatorEmission, NavigatorState};
+
+    fn state_from(emissions: Vec<NavigatorEmission>) -> AgentState {
+        match emissions.last() {
+            Some(NavigatorEmission::StateChange(payload)) => payload.state,
+            None => panic!("expected a state change emission"),
+        }
+    }
+
+    fn event(agent: AgentType, session_id: &str, event: EventType) -> AgentEvent {
+        AgentEvent {
+            agent,
+            session_id: session_id.to_string(),
+            event,
+            data: EventData::default(),
+        }
+    }
+
+    #[test]
+    fn active_session_beats_stale_complete_snapshot() {
+        let mut state = NavigatorState::new();
+
+        let first = state.apply_event(event(AgentType::Codex, "done-session", EventType::Complete));
+        assert_eq!(state_from(first), AgentState::Complete);
+
+        let second = state.apply_event(event(AgentType::Codex, "active-session", EventType::Thinking));
+        assert_eq!(state_from(second), AgentState::Thinking);
+    }
+
+    #[test]
+    fn resumed_work_is_not_blocked_by_complete_min_duration() {
+        let mut state = NavigatorState::new();
+
+        let first = state.apply_event(event(AgentType::Codex, "same-session", EventType::Complete));
+        assert_eq!(state_from(first), AgentState::Complete);
+
+        let second = state.apply_event(event(AgentType::Codex, "same-session", EventType::Thinking));
+        assert_eq!(state_from(second), AgentState::Thinking);
     }
 }

@@ -47,10 +47,10 @@ impl AgentState {
         match self {
             Self::NeedsAttention => 5,
             Self::Error => 4,
-            Self::Complete => 3,
             Self::ToolUse => 3,
             Self::Thinking => 2,
-            Self::Idle => 1,
+            Self::Complete => 1,
+            Self::Idle => 0,
         }
     }
 }
