@@ -32,23 +32,30 @@ pub fn start(app_handle: AppHandle, state: Arc<Mutex<NavigatorState>>) {
         }
         emit_all(
             &app_handle,
-            vec![NavigatorEmission::StateChange(
-                state
-                    .lock()
-                    .ok()
-                    .map(|navigator| navigator.snapshot().current)
-                    .unwrap_or_else(|| super::events::StateChangePayload {
-                        state: super::events::AgentState::Idle,
-                        agent: None,
-                        session_id: None,
-                        tool_name: None,
-                        summary: None,
-                        working_directory: None,
-                        session_title: None,
-                        needs_attention: None,
-                        server_port: Some(port),
-                    }),
-            )],
+            state
+                .lock()
+                .ok()
+                .map(|navigator| {
+                    vec![
+                        NavigatorEmission::StateChange(navigator.snapshot().current),
+                        NavigatorEmission::SessionsChanged(navigator.sessions_snapshot()),
+                    ]
+                })
+                .unwrap_or_else(|| {
+                    vec![NavigatorEmission::StateChange(
+                        super::events::StateChangePayload {
+                            state: super::events::AgentState::Idle,
+                            agent: None,
+                            session_id: None,
+                            tool_name: None,
+                            summary: None,
+                            working_directory: None,
+                            session_title: None,
+                            needs_attention: None,
+                            server_port: Some(port),
+                        },
+                    )]
+                }),
         );
 
         write_port_files(port);

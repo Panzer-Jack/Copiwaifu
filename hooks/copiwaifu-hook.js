@@ -26,6 +26,11 @@ const COPILOT_MAP = {
   userPromptSubmitted: 'thinking', preToolUse: 'tool_use',
   postToolUse: 'tool_result', errorOccurred: 'error', agentStop: 'complete',
 }
+const GEMINI_MAP = {
+  SessionStart: 'session_start', SessionEnd: 'session_end',
+  BeforeTool: 'tool_use', AfterTool: 'tool_result',
+  BeforeAgent: 'tool_use', AfterAgent: 'tool_result',
+}
 const CODEX_MAP = { 'agent-turn-complete': 'complete', notify: 'tool_use' }
 const PASSTHROUGH = new Set(['session_start','session_end','thinking','tool_use','tool_result','error','complete','permission_request'])
 
@@ -33,6 +38,7 @@ function normalizeEvent(ev) {
   if (PASSTHROUGH.has(ev)) return ev
   if (agent === 'claude-code') return CLAUDE_MAP[ev] || null
   if (agent === 'copilot') return COPILOT_MAP[ev] || null
+  if (agent === 'gemini') return GEMINI_MAP[ev] || null
   if (agent === 'codex') return CODEX_MAP[ev] || null
   return null
 }

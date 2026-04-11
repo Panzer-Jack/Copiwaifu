@@ -82,10 +82,15 @@ fn recover_session(state: &mut NavigatorState, path: &PathBuf) {
         Some("claude-code") => AgentType::ClaudeCode,
         Some("copilot") => AgentType::Copilot,
         Some("codex") => AgentType::Codex,
+        Some("gemini") => AgentType::Gemini,
+        Some("opencode") => AgentType::OpenCode,
         _ => return,
     };
 
     let event_type = match json["status"].as_str() {
+        Some("working") if json["needsAttention"].as_bool().unwrap_or(false) => {
+            EventType::NeedsAttention
+        }
         Some("working") => EventType::Thinking,
         Some("error") => EventType::Error,
         Some("completed") => EventType::Complete,

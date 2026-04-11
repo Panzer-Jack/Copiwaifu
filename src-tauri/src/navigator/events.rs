@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 
+use super::providers;
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum AgentType {
     ClaudeCode,
     Copilot,
     Codex,
+    Gemini,
+    OpenCode,
 }
 
 impl AgentType {
@@ -14,6 +18,8 @@ impl AgentType {
             Self::ClaudeCode => "claude-code",
             Self::Copilot => "copilot",
             Self::Codex => "codex",
+            Self::Gemini => "gemini",
+            Self::OpenCode => "opencode",
         }
     }
 }
@@ -52,6 +58,34 @@ impl AgentState {
             Self::Complete => 1,
             Self::Idle => 0,
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SessionPhase {
+    Idle,
+    Processing,
+    RunningTool,
+    WaitingAttention,
+    Completed,
+    Error,
+}
+
+impl SessionPhase {
+    pub fn as_agent_state(&self) -> AgentState {
+        match self {
+            Self::Idle => AgentState::Idle,
+            Self::Processing => AgentState::Thinking,
+            Self::RunningTool => AgentState::ToolUse,
+            Self::WaitingAttention => AgentState::NeedsAttention,
+            Self::Completed => AgentState::Complete,
+            Self::Error => AgentState::Error,
+        }
+    }
+
+    pub fn priority(&self) -> u8 {
+        self.as_agent_state().priority()
     }
 }
 
@@ -107,11 +141,11 @@ impl IncomingHookEvent {
     pub fn into_agent_event(self) -> Result<AgentEvent, String> {
         let agent = self
             .agent
-            .or_else(|| self.agent_id.as_deref().and_then(parse_agent_type))
+            .or_else(|| self.agent_id.as_deref().and_then(providers::parse_agent_type))
             .ok_or_else(|| "missing agent".to_string())?;
 
         let event = if let Some(raw_event) = self.event.as_deref() {
-            parse_event_type(raw_event)?
+            providers::normalize_event(agent, raw_event)?
         } else if let Some(state) = self.state {
             event_type_from_state(state)
         } else {
@@ -144,15 +178,6 @@ impl IncomingHookEvent {
     }
 }
 
-fn parse_agent_type(value: &str) -> Option<AgentType> {
-    match value {
-        "claude-code" | "claude_code" | "claude" => Some(AgentType::ClaudeCode),
-        "copilot" | "copilot-cli" | "copilot_cli" => Some(AgentType::Copilot),
-        "codex" | "codex-cli" | "codex_cli" => Some(AgentType::Codex),
-        _ => None,
-    }
-}
-
 fn event_type_from_state(state: AgentState) -> EventType {
     match state {
         AgentState::Idle => EventType::Complete,
@@ -162,24 +187,6 @@ fn event_type_from_state(state: AgentState) -> EventType {
         AgentState::Complete => EventType::Complete,
         AgentState::NeedsAttention => EventType::NeedsAttention,
     }
-}
-
-fn parse_event_type(value: &str) -> Result<EventType, String> {
-    let event = match value {
-        "session_start" | "SessionStart" | "sessionStart" => EventType::SessionStart,
-        "session_end" | "SessionEnd" | "sessionEnd" => EventType::SessionEnd,
-        "thinking" | "UserPromptSubmit" | "userPromptSubmitted" => EventType::Thinking,
-        "tool_use" | "PreToolUse" | "preToolUse" => EventType::ToolUse,
-        "tool_result" | "PostToolUse" | "postToolUse" => EventType::ToolResult,
-        "error" | "PostToolUseFailure" | "StopFailure" | "errorOccurred" => EventType::Error,
-        "complete" | "Stop" | "agentStop" | "Notification" | "notification" => EventType::Complete,
-        "permission_request" | "PermissionRequest" | "needs_attention" => EventType::NeedsAttention,
-        "Elicitation" | "SubagentStart" | "subagentStart" | "SubagentStop" | "subagentStop"
-        | "PreCompact" | "preCompact" | "PostCompact" | "WorktreeCreate" => EventType::ToolUse,
-        other => return Err(format!("unsupported event: {other}")),
-    };
-
-    Ok(event)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -204,6 +211,31 @@ pub struct StateChangePayload {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct NavigatorSessionPayload {
+    pub agent: AgentType,
+    pub session_id: String,
+    pub phase: SessionPhase,
+    pub state: AgentState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub needs_attention: Option<bool>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct NavigatorSessionsPayload {
+    pub sessions: Vec<NavigatorSessionPayload>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_port: Option<u16>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct NavigatorStatus {
     pub current: StateChangePayload,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -213,4 +245,5 @@ pub struct NavigatorStatus {
 #[derive(Clone, Debug)]
 pub enum NavigatorEmission {
     StateChange(StateChangePayload),
+    SessionsChanged(NavigatorSessionsPayload),
 }

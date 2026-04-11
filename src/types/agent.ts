@@ -1,4 +1,4 @@
-export type AgentType = 'claude-code' | 'copilot' | 'codex'
+export type AgentType = 'claude-code' | 'copilot' | 'codex' | 'gemini' | 'opencode'
 
 export const APP_LANGUAGE = {
   ENGLISH: 'english',
@@ -17,6 +17,17 @@ export const AGENT_STATE = {
 } as const
 
 export type TAgentState = typeof AGENT_STATE[keyof typeof AGENT_STATE]
+
+export const SESSION_PHASE = {
+  IDLE: 'idle',
+  PROCESSING: 'processing',
+  RUNNING_TOOL: 'running_tool',
+  WAITING_ATTENTION: 'waiting_attention',
+  COMPLETED: 'completed',
+  ERROR: 'error',
+} as const
+
+export type SessionPhase = typeof SESSION_PHASE[keyof typeof SESSION_PHASE]
 
 export const WINDOW_SIZE_PRESET = {
   SMALL: 'small',
@@ -108,5 +119,22 @@ export interface StateChangeEvent {
 
 export interface NavigatorStatus {
   current: StateChangeEvent
+  server_port?: number
+}
+
+export interface NavigatorSessionInfo {
+  agent: AgentType
+  session_id: string
+  phase: SessionPhase
+  state: TAgentState
+  tool_name?: string
+  summary?: string
+  working_directory?: string
+  session_title?: string
+  needs_attention?: boolean
+}
+
+export interface NavigatorSessionsPayload {
+  sessions: NavigatorSessionInfo[]
   server_port?: number
 }

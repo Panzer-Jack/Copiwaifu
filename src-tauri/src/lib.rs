@@ -73,6 +73,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             navigator::commands::get_agent_status,
+            navigator::commands::get_navigator_sessions,
             navigator::commands::uninstall_hooks,
             shell::commands::get_app_bootstrap,
             shell::commands::scan_model_directory,

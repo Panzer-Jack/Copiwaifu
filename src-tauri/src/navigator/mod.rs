@@ -3,11 +3,14 @@ use std::sync::{Arc, Mutex};
 use tauri::{App, AppHandle, Emitter, Manager};
 
 pub mod agent;
-mod codex_activity;
 pub mod commands;
 pub mod events;
 mod hook_helpers;
 pub mod hook_installer;
+mod presentation;
+mod providers;
+mod reconcile;
+mod reducer;
 pub mod server;
 pub mod session_recovery;
 pub mod state;
@@ -27,7 +30,7 @@ pub fn init(app: &mut App) {
 
     app.manage(NavigatorStore(state.clone()));
     server::start(app.handle().clone(), state.clone());
-    codex_activity::start(app.handle().clone(), state.clone());
+    reconcile::start(app.handle().clone(), state.clone());
     agent::start_cleanup_loop(app.handle().clone(), state);
 
     if let Err(err) = hook_installer::install_hooks() {
@@ -40,6 +43,9 @@ pub fn emit_all(app_handle: &AppHandle, emissions: Vec<NavigatorEmission>) {
         match emission {
             NavigatorEmission::StateChange(payload) => {
                 let _ = app_handle.emit("agent:state-change", payload);
+            }
+            NavigatorEmission::SessionsChanged(payload) => {
+                let _ = app_handle.emit("navigator:sessions-changed", payload);
             }
         }
     }

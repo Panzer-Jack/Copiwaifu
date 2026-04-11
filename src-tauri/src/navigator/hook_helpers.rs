@@ -35,6 +35,26 @@ pub fn codex_config_path() -> Result<PathBuf, String> {
     Ok(home_dir()?.join(".codex").join("config.toml"))
 }
 
+pub fn gemini_settings_path() -> Result<PathBuf, String> {
+    Ok(home_dir()?.join(".gemini").join("settings.json"))
+}
+
+pub fn opencode_plugin_dir() -> Result<PathBuf, String> {
+    Ok(home_dir()?.join(".config").join("opencode").join("plugins"))
+}
+
+pub fn opencode_plugin_path() -> Result<PathBuf, String> {
+    Ok(opencode_plugin_dir()?.join("copiwaifu.js"))
+}
+
+pub fn opencode_config_path() -> Result<PathBuf, String> {
+    Ok(home_dir()?.join(".config").join("opencode").join("config.json"))
+}
+
+pub fn opencode_config_path_new() -> Result<PathBuf, String> {
+    Ok(home_dir()?.join(".config").join("opencode").join("opencode.json"))
+}
+
 pub fn backup_path() -> Result<PathBuf, String> {
     Ok(hook_dir()?.join("original-hooks.json"))
 }

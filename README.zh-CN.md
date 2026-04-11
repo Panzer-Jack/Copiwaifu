@@ -4,7 +4,7 @@
 
 你的 Live2D AI 桌面导航娘。
 
-Copiwaifu 是一个基于 Tauri 的桌宠应用，会把 AI 编程工具的运行状态同步成桌面上的 Live2D 角色反馈。目前主要对接 Claude Code、GitHub Copilot 和 Codex。
+Copiwaifu 是一个基于 Tauri 的桌宠应用，会把 AI 编程工具的运行状态同步成桌面上的 Live2D 角色反馈。目前主要对接 Claude Code、GitHub Copilot、Codex、Gemini CLI 和 OpenCode。
 
 ## 官网
 
@@ -45,6 +45,8 @@ xattr -dr com.apple.quarantine /Applications/copiwaifu.app
 - Claude Code：`~/.claude/settings.json`
 - GitHub Copilot：`~/.config/github-copilot/config.json`
 - Codex：`~/.codex/config.toml`
+- Gemini CLI：`~/.gemini/settings.json`
+- OpenCode：`~/.config/opencode/opencode.json`
 
 原有 hook 配置会备份到 `~/.copiwaifu/hooks/original-hooks.json`。
 

@@ -4,7 +4,7 @@
 
 Your Live2D AI navigator for everyday coding sessions.
 
-Copiwaifu is a Tauri desktop pet that mirrors the state of your AI coding tools and turns that activity into a small Live2D companion on your desktop. It currently focuses on syncing with Claude Code, GitHub Copilot, and Codex.
+Copiwaifu is a Tauri desktop pet that mirrors the state of your AI coding tools and turns that activity into a small Live2D companion on your desktop. It currently focuses on syncing with Claude Code, GitHub Copilot, Codex, Gemini CLI, and OpenCode.
 
 ## Website
 
@@ -43,6 +43,8 @@ The hook installer currently integrates with:
 - Claude Code via `~/.claude/settings.json`
 - GitHub Copilot via `~/.config/github-copilot/config.json`
 - Codex via `~/.codex/config.toml`
+- Gemini CLI via `~/.gemini/settings.json`
+- OpenCode via `~/.config/opencode/opencode.json`
 
 Original hook definitions are backed up to `~/.copiwaifu/hooks/original-hooks.json`.
 
