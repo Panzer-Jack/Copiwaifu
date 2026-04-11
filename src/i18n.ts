@@ -47,6 +47,9 @@ type LanguageCopy = {
     windowSizeLabel: string
     actionGroupBindingLabel: string
     noBinding: string
+    loadingActionGroups: string
+    noActionGroupsFound: string
+    actionGroupOptionsLoaded: (count: number) => string
     cancel: string
     save: string
     saving: string
@@ -110,6 +113,9 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       windowSizeLabel: 'Window Size',
       actionGroupBindingLabel: 'Action Group Binding',
       noBinding: 'Leave empty to auto-detect',
+      loadingActionGroups: 'Loading motion groups...',
+      noActionGroupsFound: 'No motion groups were detected for this model.',
+      actionGroupOptionsLoaded: count => `${count} motion groups detected from easy-live2d.`,
       cancel: 'Cancel',
       save: 'Save',
       saving: 'Saving...',
@@ -188,6 +194,9 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       windowSizeLabel: '窗口尺寸',
       actionGroupBindingLabel: '动作组绑定',
       noBinding: '留空则自动识别',
+      loadingActionGroups: '正在读取动作组...',
+      noActionGroupsFound: '当前模型未识别到动作组。',
+      actionGroupOptionsLoaded: count => `已通过 easy-live2d 识别到 ${count} 个动作组。`,
       cancel: '取消',
       save: '保存',
       saving: '保存中...',

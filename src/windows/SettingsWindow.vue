@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { CubismSetting, Live2DSprite } from 'easy-live2d'
+import { Application, Ticker } from 'pixi.js'
 import { open } from '@tauri-apps/plugin-dialog'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { getLanguageCopy } from '../i18n'
 import {
   AGENT_STATE_ORDER,
@@ -15,6 +17,7 @@ import type {
   AppSettings,
   ImportedModelResult,
   ModelScanResult,
+  MotionGroupOption,
   TAgentState,
 } from '../types/agent'
 
@@ -27,11 +30,15 @@ const isScanning = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const modelMessage = ref('')
+const isLoadingMotionGroups = ref(false)
 
 const form = reactive<AppSettings>(createFormState(props.bootstrap.settings))
 const currentScan = ref<ModelScanResult>(props.bootstrap.modelScan)
+const motionGroupOptions = ref<MotionGroupOption[]>(props.bootstrap.modelScan.availableMotionGroups)
 const ui = computed(() => getLanguageCopy(form.language))
 const NAME_MAX_LENGTH = 16
+const DEFAULT_MODEL_DIRECTORY = '/Resources/Hiyori'
+let motionGroupLoadToken = 0
 
 const currentWindow = getCurrentWindow()
 
@@ -43,6 +50,18 @@ watch(() => props.bootstrap.modelScan, (scan) => {
   currentScan.value = scan
   modelMessage.value = scan.validationMessage ?? ''
 }, { immediate: true })
+
+watch(
+  () => [form.modelDirectory, currentScan.value.modelEntryFile] as const,
+  () => {
+    void loadMotionGroupOptions()
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  motionGroupLoadToken += 1
+})
 
 function createFormState(settings: AppSettings): AppSettings {
   return {
@@ -74,6 +93,138 @@ function applySettings(settings: AppSettings) {
 function clearNotice() {
   errorMessage.value = ''
   successMessage.value = ''
+}
+
+function buildMotionGroupOptions(groups: string[]): MotionGroupOption[] {
+  const seen = new Set<string>()
+  const options: MotionGroupOption[] = []
+
+  for (const group of groups) {
+    const trimmedGroup = group.trim()
+    if (!trimmedGroup || seen.has(trimmedGroup)) {
+      continue
+    }
+
+    seen.add(trimmedGroup)
+    options.push({
+      id: trimmedGroup,
+      group: trimmedGroup,
+      label: trimmedGroup,
+    })
+  }
+
+  return options
+}
+
+function joinModelPath(basePath: string, relativePath: string) {
+  return `${basePath.replace(/[\\/]+$/, '')}/${relativePath.replace(/^[\\/]+/, '')}`
+}
+
+const selectableMotionGroupOptions = computed(() => {
+  const options = [...motionGroupOptions.value]
+  const seen = new Set(options.map(option => option.group))
+
+  for (const state of AGENT_STATE_ORDER) {
+    const binding = form.actionGroupBindings[state]?.trim()
+    if (!binding || seen.has(binding)) {
+      continue
+    }
+
+    seen.add(binding)
+    options.push({
+      id: binding,
+      group: binding,
+      label: binding,
+    })
+  }
+
+  return options
+})
+
+async function createMotionReaderSprite() {
+  if (form.modelDirectory) {
+    const modelEntryPath = joinModelPath(form.modelDirectory, currentScan.value.modelEntryFile)
+    const modelEntryUrl = convertFileSrc(modelEntryPath)
+    const response = await fetch(modelEntryUrl)
+
+    if (!response.ok) {
+      throw new Error(`failed_to_read_model_json: ${response.status}`)
+    }
+
+    const modelJSON = await response.json()
+    const modelSetting = new CubismSetting({ modelJSON })
+
+    modelSetting.redirectPath(({ file }) => {
+      return convertFileSrc(joinModelPath(form.modelDirectory as string, file))
+    })
+
+    return new Live2DSprite({
+      modelSetting,
+      ticker: Ticker.shared,
+    })
+  }
+
+  return new Live2DSprite({
+    modelPath: joinModelPath(DEFAULT_MODEL_DIRECTORY, currentScan.value.modelEntryFile),
+    ticker: Ticker.shared,
+  })
+}
+
+async function readMotionGroupOptionsWithEasyLive2D() {
+  const app = new Application()
+  let sprite: Live2DSprite | null = null
+
+  await app.init({
+    canvas: document.createElement('canvas'),
+    width: 1,
+    height: 1,
+    resolution: 1,
+    autoDensity: true,
+    backgroundAlpha: 0,
+  })
+
+  try {
+    sprite = await createMotionReaderSprite()
+    app.stage.addChild(sprite as any)
+    await sprite.ready
+    return buildMotionGroupOptions(sprite.getMotions().map(motion => motion.group))
+  }
+  finally {
+    if (sprite) {
+      app.stage.removeChild(sprite as any)
+      sprite.destroy()
+    }
+    app.destroy(true)
+  }
+}
+
+async function loadMotionGroupOptions() {
+  const token = ++motionGroupLoadToken
+  isLoadingMotionGroups.value = true
+
+  try {
+    const options = await readMotionGroupOptionsWithEasyLive2D()
+    if (token !== motionGroupLoadToken) {
+      return
+    }
+
+    motionGroupOptions.value = options.length > 0
+      ? options
+      : currentScan.value.availableMotionGroups
+  }
+  catch (error) {
+    if (token !== motionGroupLoadToken) {
+      return
+    }
+
+    console.warn('failed to load motion groups with easy-live2d', error)
+    motionGroupOptions.value = currentScan.value.availableMotionGroups
+  }
+  finally {
+    if (token === motionGroupLoadToken) {
+      isLoadingMotionGroups.value = false
+    }
+  }
 }
 
 async function resetToDefaultModel() {
@@ -300,15 +451,32 @@ function setActionGroupBinding(state: TAgentState, value: string) {
             class="binding-row"
           >
             <span>{{ ui.stateLabels[state] }}</span>
-            <input
-              class="field__input"
+            <select
+              class="field__select"
               :value="form.actionGroupBindings[state] ?? ''"
-              :placeholder="ui.settings.noBinding"
-              type="text"
-              @input="setActionGroupBinding(state, ($event.target as HTMLInputElement).value)"
+              :disabled="isLoadingMotionGroups"
+              @change="setActionGroupBinding(state, ($event.target as HTMLSelectElement).value)"
             >
+              <option value="">
+                {{ isLoadingMotionGroups ? ui.settings.loadingActionGroups : ui.settings.noBinding }}
+              </option>
+              <option
+                v-for="option in selectableMotionGroupOptions"
+                :key="option.id"
+                :value="option.group"
+              >
+                {{ option.label }}
+              </option>
+            </select>
           </label>
         </div>
+        <p class="field__hint">
+          {{
+            selectableMotionGroupOptions.length > 0
+              ? ui.settings.actionGroupOptionsLoaded(selectableMotionGroupOptions.length)
+              : ui.settings.noActionGroupsFound
+          }}
+        </p>
       </div>
 
       <p
