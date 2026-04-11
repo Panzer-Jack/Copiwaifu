@@ -25,6 +25,10 @@ const DEFAULT_MODEL_ENTRY_FILE: &str = "Hiyori.model3.json";
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const NAME_MAX_LENGTH: usize = 16;
 const TRAY_ID: &str = "copiwaifu-tray";
+const CUSTOM_MODELS_DIR_NAME: &str = "custom-models";
+const CURRENT_CUSTOM_MODEL_DIR_NAME: &str = "current";
+const STAGED_CUSTOM_MODEL_DIR_NAME: &str = "current.staging";
+const BACKUP_CUSTOM_MODEL_DIR_NAME: &str = "current.backup";
 const MENU_OPEN_SETTINGS: &str = "open-settings";
 const MENU_TOGGLE_VISIBILITY: &str = "toggle-visibility";
 const MENU_EXIT: &str = "exit-app";
@@ -99,6 +103,13 @@ pub struct ModelScanResult {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ImportedModelResult {
+    pub imported_model_directory: String,
+    pub model_scan: ModelScanResult,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppBootstrap {
     pub settings: AppSettings,
     pub model_scan: ModelScanResult,
@@ -153,6 +164,15 @@ pub mod commands {
         language: Option<AppLanguage>,
     ) -> Result<ModelScanResult, String> {
         scan_model_directory_path(Path::new(&path), None, language.unwrap_or_default())
+    }
+
+    #[tauri::command]
+    pub fn import_model_directory(
+        path: String,
+        app_handle: AppHandle,
+        language: Option<AppLanguage>,
+    ) -> Result<ImportedModelResult, String> {
+        import_model_directory_inner(&app_handle, Path::new(&path), language.unwrap_or_default())
     }
 
     #[tauri::command]
@@ -230,6 +250,56 @@ pub fn current_model_directory(app_handle: &AppHandle) -> Option<PathBuf> {
     let shell = app_handle.try_state::<ShellStore>()?;
     let state = shell.0.lock().ok()?;
     state.settings.model_directory.as_deref().map(PathBuf::from)
+}
+
+fn import_model_directory_inner(
+    app_handle: &AppHandle,
+    source_directory: &Path,
+    language: AppLanguage,
+) -> Result<ImportedModelResult, String> {
+    if !source_directory.exists() {
+        return Err(model_directory_not_found_message(language));
+    }
+    if !source_directory.is_dir() {
+        return Err(select_model_directory_message(language));
+    }
+
+    let custom_models_root = custom_models_root(app_handle)?;
+    let current_directory = custom_models_root.join(CURRENT_CUSTOM_MODEL_DIR_NAME);
+    let staging_directory = custom_models_root.join(STAGED_CUSTOM_MODEL_DIR_NAME);
+    let backup_directory = custom_models_root.join(BACKUP_CUSTOM_MODEL_DIR_NAME);
+
+    fs::create_dir_all(&custom_models_root).map_err(|err| err.to_string())?;
+    remove_path_if_exists(&staging_directory).map_err(|err| err.to_string())?;
+    remove_path_if_exists(&backup_directory).map_err(|err| err.to_string())?;
+
+    if let Err(err) = copy_directory_contents(source_directory, &staging_directory) {
+        let _ = remove_path_if_exists(&staging_directory);
+        return Err(err.to_string());
+    }
+
+    let model_scan = match scan_model_directory_path(&staging_directory, None, language) {
+        Ok(scan) => scan,
+        Err(err) => {
+            let _ = remove_path_if_exists(&staging_directory);
+            return Err(err);
+        }
+    };
+
+    if let Err(err) =
+        replace_current_model_directory(&staging_directory, &current_directory, &backup_directory)
+    {
+        let _ = remove_path_if_exists(&staging_directory);
+        let _ = remove_path_if_exists(&backup_directory);
+        return Err(err.to_string());
+    }
+
+    remove_path_if_exists(&backup_directory).map_err(|err| err.to_string())?;
+
+    Ok(ImportedModelResult {
+        imported_model_directory: current_directory.to_string_lossy().to_string(),
+        model_scan,
+    })
 }
 
 fn save_settings_inner(
@@ -382,6 +452,14 @@ fn settings_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
         .app_config_dir()
         .map_err(|err| err.to_string())
         .map(|dir| dir.join(SETTINGS_FILE_NAME))
+}
+
+fn custom_models_root(app_handle: &AppHandle) -> Result<PathBuf, String> {
+    app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|err| err.to_string())
+        .map(|dir| dir.join(CUSTOM_MODELS_DIR_NAME))
 }
 
 fn create_tray(app_handle: &AppHandle) -> tauri::Result<()> {
@@ -891,6 +969,63 @@ fn join_safe(base: &Path, relative_path: &str, language: AppLanguage) -> Result<
         }
     }
     Ok(path)
+}
+
+fn copy_directory_contents(source: &Path, destination: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(destination)?;
+
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let entry_type = entry.file_type()?;
+        let from_path = entry.path();
+        let to_path = destination.join(entry.file_name());
+
+        if entry_type.is_dir() {
+            copy_directory_contents(&from_path, &to_path)?;
+        } else if entry_type.is_file() {
+            fs::copy(&from_path, &to_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn remove_path_if_exists(path: &Path) -> std::io::Result<()> {
+    if !path.exists() {
+        return Ok(());
+    }
+
+    if path.is_dir() {
+        fs::remove_dir_all(path)
+    } else {
+        fs::remove_file(path)
+    }
+}
+
+fn replace_current_model_directory(
+    staging_directory: &Path,
+    current_directory: &Path,
+    backup_directory: &Path,
+) -> std::io::Result<()> {
+    let had_current_directory = current_directory.exists();
+    if had_current_directory {
+        fs::rename(current_directory, backup_directory)?;
+    }
+
+    match fs::rename(staging_directory, current_directory) {
+        Ok(()) => {
+            if had_current_directory {
+                remove_path_if_exists(backup_directory)?;
+            }
+            Ok(())
+        }
+        Err(err) => {
+            if had_current_directory && backup_directory.exists() {
+                let _ = fs::rename(backup_directory, current_directory);
+            }
+            Err(err)
+        }
+    }
 }
 
 fn settings_window_title(language: AppLanguage) -> &'static str {

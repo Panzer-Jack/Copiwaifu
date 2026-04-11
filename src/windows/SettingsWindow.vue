@@ -10,7 +10,13 @@ import {
   WINDOW_SIZE_PRESET,
   createEmptyActionGroupBindings,
 } from '../types/agent'
-import type { AppBootstrap, AppSettings, ModelScanResult, TAgentState } from '../types/agent'
+import type {
+  AppBootstrap,
+  AppSettings,
+  ImportedModelResult,
+  ModelScanResult,
+  TAgentState,
+} from '../types/agent'
 
 const props = defineProps<{
   bootstrap: AppBootstrap
@@ -106,13 +112,13 @@ async function pickModelDirectory() {
 
   isScanning.value = true
   try {
-    const scan = await invoke<ModelScanResult>('scan_model_directory', {
+    const imported = await invoke<ImportedModelResult>('import_model_directory', {
       path: selected,
       language: form.language,
     })
 
-    form.modelDirectory = selected
-    currentScan.value = scan
+    form.modelDirectory = imported.importedModelDirectory
+    currentScan.value = imported.modelScan
     modelMessage.value = ui.value.settings.modelValidated
   }
   catch (error) {

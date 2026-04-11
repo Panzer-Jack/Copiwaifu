@@ -48,6 +48,11 @@ export interface ModelScanResult {
   validationMessage?: string
 }
 
+export interface ImportedModelResult {
+  importedModelDirectory: string
+  modelScan: ModelScanResult
+}
+
 export interface AppBootstrap {
   settings: AppSettings
   modelScan: ModelScanResult

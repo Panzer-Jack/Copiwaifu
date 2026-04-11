@@ -76,6 +76,7 @@ pub fn run() {
             navigator::commands::uninstall_hooks,
             shell::commands::get_app_bootstrap,
             shell::commands::scan_model_directory,
+            shell::commands::import_model_directory,
             shell::commands::scan_default_model,
             shell::commands::save_settings,
             shell::commands::open_settings_window,
