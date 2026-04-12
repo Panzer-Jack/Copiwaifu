@@ -3,6 +3,7 @@ export type AgentType = 'claude-code' | 'copilot' | 'codex' | 'gemini' | 'openco
 export const APP_LANGUAGE = {
   ENGLISH: 'english',
   CHINESE: 'chinese',
+  JAPANESE: 'japanese',
 } as const
 
 export type AppLanguage = typeof APP_LANGUAGE[keyof typeof APP_LANGUAGE]

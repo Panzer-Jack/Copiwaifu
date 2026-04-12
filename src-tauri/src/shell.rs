@@ -52,6 +52,7 @@ impl Default for WindowSizePreset {
 pub enum AppLanguage {
     English,
     Chinese,
+    Japanese,
 }
 
 impl Default for AppLanguage {
@@ -1032,6 +1033,7 @@ fn settings_window_title(language: AppLanguage) -> &'static str {
     match language {
         AppLanguage::English => "Copiwaifu Settings",
         AppLanguage::Chinese => "Copiwaifu 设置",
+        AppLanguage::Japanese => "Copiwaifu 設定",
     }
 }
 
@@ -1039,6 +1041,7 @@ fn settings_menu_label(language: AppLanguage) -> &'static str {
     match language {
         AppLanguage::English => "Settings",
         AppLanguage::Chinese => "设置",
+        AppLanguage::Japanese => "設定",
     }
 }
 
@@ -1046,6 +1049,7 @@ fn exit_menu_label(language: AppLanguage) -> &'static str {
     match language {
         AppLanguage::English => "Exit",
         AppLanguage::Chinese => "退出",
+        AppLanguage::Japanese => "終了",
     }
 }
 
@@ -1055,6 +1059,8 @@ fn visibility_menu_label(visible: bool, language: AppLanguage) -> &'static str {
         (false, AppLanguage::English) => "Show",
         (true, AppLanguage::Chinese) => "隐藏",
         (false, AppLanguage::Chinese) => "显示",
+        (true, AppLanguage::Japanese) => "隠す",
+        (false, AppLanguage::Japanese) => "表示",
     }
 }
 
@@ -1062,6 +1068,7 @@ fn name_required_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "Name cannot be empty.".to_string(),
         AppLanguage::Chinese => "名字不能为空。".to_string(),
+        AppLanguage::Japanese => "名前は空にできません。".to_string(),
     }
 }
 
@@ -1069,6 +1076,7 @@ fn name_too_long_message(language: AppLanguage, max_length: usize) -> String {
     match language {
         AppLanguage::English => format!("Name can be up to {max_length} characters."),
         AppLanguage::Chinese => format!("名字最多支持 {max_length} 个字符。"),
+        AppLanguage::Japanese => format!("名前は最大 {max_length} 文字です。"),
     }
 }
 
@@ -1076,6 +1084,7 @@ fn default_model_fallback_warning(language: AppLanguage, error: &str) -> String 
     match language {
         AppLanguage::English => format!("Reverted to the built-in default model: {error}"),
         AppLanguage::Chinese => format!("已回退默认模型：{error}"),
+        AppLanguage::Japanese => format!("内蔵のデフォルトモデルに戻しました: {error}"),
     }
 }
 
@@ -1083,6 +1092,7 @@ fn model_directory_not_found_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "Model directory does not exist.".to_string(),
         AppLanguage::Chinese => "模型目录不存在".to_string(),
+        AppLanguage::Japanese => "モデルディレクトリが存在しません。".to_string(),
     }
 }
 
@@ -1090,6 +1100,7 @@ fn select_model_directory_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "Please choose a model directory.".to_string(),
         AppLanguage::Chinese => "请选择模型目录".to_string(),
+        AppLanguage::Japanese => "モデルディレクトリを選択してください。".to_string(),
     }
 }
 
@@ -1097,6 +1108,7 @@ fn missing_model_entry_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "The folder root is missing a *.model3.json file.".to_string(),
         AppLanguage::Chinese => "目录顶层缺少 *.model3.json".to_string(),
+        AppLanguage::Japanese => "フォルダー直下に *.model3.json が見つかりません。".to_string(),
     }
 }
 
@@ -1106,6 +1118,9 @@ fn multiple_model_entries_message(language: AppLanguage) -> String {
             "The folder root contains multiple *.model3.json files.".to_string()
         }
         AppLanguage::Chinese => "目录顶层存在多个 *.model3.json".to_string(),
+        AppLanguage::Japanese => {
+            "フォルダー直下に複数の *.model3.json ファイルがあります。".to_string()
+        }
     }
 }
 
@@ -1113,6 +1128,7 @@ fn invalid_model_entry_name_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "Invalid model entry filename.".to_string(),
         AppLanguage::Chinese => "模型入口文件名无效".to_string(),
+        AppLanguage::Japanese => "モデルのエントリーファイル名が無効です。".to_string(),
     }
 }
 
@@ -1120,6 +1136,7 @@ fn missing_file_references_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "model3.json is missing FileReferences.".to_string(),
         AppLanguage::Chinese => "model3.json 缺少 FileReferences".to_string(),
+        AppLanguage::Japanese => "model3.json に FileReferences がありません。".to_string(),
     }
 }
 
@@ -1127,6 +1144,7 @@ fn invalid_textures_config_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "The Textures config is invalid.".to_string(),
         AppLanguage::Chinese => "Textures 配置格式无效".to_string(),
+        AppLanguage::Japanese => "Textures の設定形式が無効です。".to_string(),
     }
 }
 
@@ -1134,6 +1152,7 @@ fn invalid_motion_group_message(language: AppLanguage, group_name: &str) -> Stri
     match language {
         AppLanguage::English => format!("Motion group {group_name} has an invalid config."),
         AppLanguage::Chinese => format!("动作组 {group_name} 配置格式无效"),
+        AppLanguage::Japanese => format!("モーショングループ {group_name} の設定形式が無効です。"),
     }
 }
 
@@ -1141,6 +1160,7 @@ fn model_resource_missing_message(language: AppLanguage, relative_path: &str) ->
     match language {
         AppLanguage::English => format!("Missing model resource: {relative_path}"),
         AppLanguage::Chinese => format!("模型资源缺失：{relative_path}"),
+        AppLanguage::Japanese => format!("モデルリソースが不足しています: {relative_path}"),
     }
 }
 
@@ -1148,6 +1168,7 @@ fn model_resource_not_found_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "Model resource does not exist.".to_string(),
         AppLanguage::Chinese => "模型资源不存在".to_string(),
+        AppLanguage::Japanese => "モデルリソースが存在しません。".to_string(),
     }
 }
 
@@ -1155,6 +1176,7 @@ fn invalid_model_path_message(language: AppLanguage) -> String {
     match language {
         AppLanguage::English => "Illegal model path.".to_string(),
         AppLanguage::Chinese => "模型路径非法".to_string(),
+        AppLanguage::Japanese => "モデルパスが不正です。".to_string(),
     }
 }
 

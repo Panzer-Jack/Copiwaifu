@@ -108,7 +108,7 @@ pnpm release:sync-version  # 同步 package.json / tauri.conf.json / Cargo.toml 
 设置窗口里目前可以调整：
 
 - 桌宠名字
-- 界面语言：英文 / 中文
+- 界面语言：英文 / 中文 / 日语
 - 开机自启
 - Live2D 模型目录
 - 窗口尺寸预设

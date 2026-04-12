@@ -107,7 +107,7 @@ pnpm release:sync-version  # sync version across package.json / tauri.conf.json 
 From the settings window you can configure:
 
 - Pet name
-- UI language: English or Chinese
+- UI language: English, Chinese, or Japanese
 - Auto start on login
 - Live2D model directory
 - Window size preset

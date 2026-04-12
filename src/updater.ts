@@ -47,9 +47,9 @@ const UPDATE_COPY: Record<AppLanguage, UpdateCopy> = {
     installLater: 'Later',
   },
   [APP_LANGUAGE.CHINESE]: {
-    availableTitle: '发现新版本',
+    availableTitle: '检测到新版本',
     availableMessage: (version, date, notes) => {
-      const lines = [`检测到新版本 ${version}。`]
+      const lines = [`发现新的形态包 ${version}。`]
 
       if (date) {
         lines.push(`发布日期：${date}`)
@@ -58,11 +58,29 @@ const UPDATE_COPY: Record<AppLanguage, UpdateCopy> = {
         lines.push('', '更新说明：', notes)
       }
 
-      lines.push('', '是否现在安装并重启应用？')
+      lines.push('', '要现在更新并重新启动吗？')
       return lines.join('\n')
     },
-    installNow: '立即安装',
-    installLater: '稍后',
+    installNow: '现在更新',
+    installLater: '等会再说',
+  },
+  [APP_LANGUAGE.JAPANESE]: {
+    availableTitle: '更新があります',
+    availableMessage: (version, date, notes) => {
+      const lines = [`バージョン ${version} を利用できます。`]
+
+      if (date) {
+        lines.push(`公開日: ${date}`)
+      }
+      if (notes) {
+        lines.push('', '更新内容:', notes)
+      }
+
+      lines.push('', '今すぐ更新してアプリを再起動しますか？')
+      return lines.join('\n')
+    },
+    installNow: '今すぐ更新',
+    installLater: '後で',
   },
 }
 

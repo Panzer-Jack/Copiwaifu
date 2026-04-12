@@ -2,9 +2,11 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { open } from '@tauri-apps/plugin-dialog'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { readAvailableMotionGroups } from '../live2d/model'
 import { getLanguageCopy } from '../i18n'
+import { MANUAL_UPDATE_WEBSITE_URL } from '../updater'
 import {
   ACTION_GROUP_BINDING_SOURCE,
   AGENT_STATE_ORDER,
@@ -256,6 +258,15 @@ function cancel() {
   void currentWindow.close()
 }
 
+async function openOfficialWebsite() {
+  try {
+    await openUrl(MANUAL_UPDATE_WEBSITE_URL)
+  }
+  catch (error) {
+    console.warn('failed to open official website', error)
+  }
+}
+
 function setActionGroupBinding(state: TAgentState, value: string) {
   const trimmedValue = value.trim()
   form.actionGroupBindings[state] = trimmedValue || null
@@ -315,6 +326,9 @@ function actionGroupBindingStatus(state: TAgentState) {
           </option>
           <option :value="APP_LANGUAGE.CHINESE">
             中文
+          </option>
+          <option :value="APP_LANGUAGE.JAPANESE">
+            日本語
           </option>
         </select>
       </label>
@@ -391,6 +405,22 @@ function actionGroupBindingStatus(state: TAgentState) {
             <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.LARGE] }}</span>
           </label>
         </div>
+      </div>
+
+      <div class="field">
+        <span class="field__label">{{ ui.settings.websiteLabel }}</span>
+        <div class="model-picker">
+          <button
+            class="button button--secondary"
+            type="button"
+            @click="openOfficialWebsite"
+          >
+            {{ ui.updater.openWebsite }}
+          </button>
+        </div>
+        <p class="field__path">
+          {{ MANUAL_UPDATE_WEBSITE_URL }}
+        </p>
       </div>
 
       <div class="field">
