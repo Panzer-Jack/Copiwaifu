@@ -10,6 +10,9 @@ Copiwaifu is a Tauri desktop pet that mirrors the state of your AI coding tools 
 
 - Copiwaifu: https://copiwaifu.panzer-jack.cn/
 
+<img width="1512" height="824" alt="image" src="https://github.com/user-attachments/assets/7c387482-58ba-4e61-b500-0b7c0b01404a" />
+
+
 ## After Installing On macOS（important！！！）
 
 After moving the app into `/Applications`, run:
