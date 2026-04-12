@@ -192,7 +192,7 @@ async function mountSprite() {
   destroySprite()
 
   const sprite = new Live2DSprite({
-    modelPath: '/Resources/Hiyori/Hiyori.model3.json',
+    modelPath: '/Resources/Yulia/Yulia.model3.json',
     ticker: Ticker.shared,
   })
 

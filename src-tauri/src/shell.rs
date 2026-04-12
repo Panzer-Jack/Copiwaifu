@@ -19,9 +19,9 @@ pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const SETTINGS_WINDOW_LABEL: &str = "settings";
 pub const SETTINGS_UPDATED_EVENT: &str = "settings:updated";
 pub const WINDOW_VISIBILITY_CHANGED_EVENT: &str = "window:visibility-changed";
-pub const DEFAULT_MODEL_URL: &str = "/Resources/Hiyori/Hiyori.model3.json";
+pub const DEFAULT_MODEL_URL: &str = "/Resources/Yulia/Yulia.model3.json";
 
-const DEFAULT_MODEL_ENTRY_FILE: &str = "Hiyori.model3.json";
+const DEFAULT_MODEL_ENTRY_FILE: &str = "Yulia.model3.json";
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const NAME_MAX_LENGTH: usize = 16;
 const TRAY_ID: &str = "copiwaifu-tray";
@@ -664,9 +664,9 @@ fn apply_main_window_size(window: &WebviewWindow, preset: &WindowSizePreset) -> 
 
 fn window_size_dimensions(preset: &WindowSizePreset) -> (f64, f64) {
     match preset {
-        WindowSizePreset::Small => (160.0, 480.0),
-        WindowSizePreset::Medium => (200.0, 600.0),
-        WindowSizePreset::Large => (240.0, 720.0),
+        WindowSizePreset::Small => (280.0, 480.0),
+        WindowSizePreset::Medium => (340.0, 600.0),
+        WindowSizePreset::Large => (400.0, 720.0),
     }
 }
 
@@ -754,25 +754,25 @@ fn try_scan_default_model(
 
 fn default_model_directory_candidates(app_handle: &AppHandle) -> Vec<PathBuf> {
     let mut candidates = vec![
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../public/Resources/Hiyori"),
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../dist/Resources/Hiyori"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../public/Resources/Yulia"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../dist/Resources/Yulia"),
     ];
 
     if let Ok(resource_dir) = app_handle.path().resource_dir() {
         candidates.extend([
-            resource_dir.join("Resources/Hiyori"),
-            resource_dir.join("assets/Resources/Hiyori"),
-            resource_dir.join("dist/Resources/Hiyori"),
-            resource_dir.join("../Resources/Hiyori"),
+            resource_dir.join("Resources/Yulia"),
+            resource_dir.join("assets/Resources/Yulia"),
+            resource_dir.join("dist/Resources/Yulia"),
+            resource_dir.join("../Resources/Yulia"),
         ]);
     }
 
     if let Ok(executable_path) = std::env::current_exe() {
         if let Some(executable_dir) = executable_path.parent() {
             candidates.extend([
-                executable_dir.join("../Resources/Hiyori"),
-                executable_dir.join("../resources/Resources/Hiyori"),
-                executable_dir.join("Resources/Hiyori"),
+                executable_dir.join("../Resources/Yulia"),
+                executable_dir.join("../resources/Resources/Yulia"),
+                executable_dir.join("Resources/Yulia"),
             ]);
         }
     }

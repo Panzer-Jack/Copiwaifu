@@ -43,7 +43,7 @@ const MENU_HEIGHT = 196
 const MENU_EDGE_GAP = 12
 
 Config.MotionGroupIdle = 'Idle'
-Config.ViewScale = 2.5
+Config.ViewScale = 1.8
 Config.CubismLoggingLevel = LogLevel.LogLevel_Off
 Config.MouseFollow = true
 

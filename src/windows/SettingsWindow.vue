@@ -37,7 +37,7 @@ const currentScan = ref<ModelScanResult>(props.bootstrap.modelScan)
 const motionGroupOptions = ref<MotionGroupOption[]>(props.bootstrap.modelScan.availableMotionGroups)
 const ui = computed(() => getLanguageCopy(form.language))
 const NAME_MAX_LENGTH = 16
-const DEFAULT_MODEL_DIRECTORY = '/Resources/Hiyori'
+const DEFAULT_MODEL_DIRECTORY = '/Resources/Yulia'
 let motionGroupLoadToken = 0
 
 const currentWindow = getCurrentWindow()

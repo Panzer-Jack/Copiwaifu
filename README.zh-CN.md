@@ -112,7 +112,7 @@ pnpm release:sync-version  # 同步 package.json / tauri.conf.json / Cargo.toml 
 - 窗口尺寸预设
 - 各运行状态对应的动作组绑定
 
-如果没有选择自定义模型，Copiwaifu 会使用内置的 `Hiyori` 模型。
+如果没有选择自定义模型，Copiwaifu 会使用内置的 `Yulia` 模型。
 
 ## 自定义 Live2D 模型
 

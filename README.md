@@ -110,7 +110,7 @@ From the settings window you can configure:
 - Window size preset
 - Motion group binding for each agent state
 
-If no custom model is selected, Copiwaifu uses the bundled `Hiyori` model.
+If no custom model is selected, Copiwaifu uses the bundled `Yulia` model.
 
 ## Custom Live2D Models
 

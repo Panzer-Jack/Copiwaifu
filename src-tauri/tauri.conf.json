@@ -14,10 +14,12 @@
     "windows": [
       {
         "title": "Copiwaifu",
-        "width": 200,
+        "width": 340,
         "height": 600,
-        "minWidth": 200,
+        "minWidth": 340,
         "minHeight": 600,
+        "maxWidth": 340,
+        "maxHeight": 600,
         "resizable": false,
         "transparent": true,
         "backgroundColor": "#00000000",
