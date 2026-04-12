@@ -50,6 +50,10 @@ type LanguageCopy = {
     loadingActionGroups: string
     noActionGroupsFound: string
     actionGroupOptionsLoaded: (count: number) => string
+    manualBindingStatus: (group: string) => string
+    autoBindingStatus: (group: string) => string
+    unresolvedBindingStatus: string
+    manualBindingOption: (group: string) => string
     cancel: string
     save: string
     saving: string
@@ -116,6 +120,10 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       loadingActionGroups: 'Loading motion groups...',
       noActionGroupsFound: 'No motion groups were detected for this model.',
       actionGroupOptionsLoaded: count => `${count} motion groups detected from easy-live2d.`,
+      manualBindingStatus: group => `Manual binding: ${group}`,
+      autoBindingStatus: group => `Auto matched: ${group}`,
+      unresolvedBindingStatus: 'No matching motion group detected.',
+      manualBindingOption: group => `${group} (manual binding)`,
       cancel: 'Cancel',
       save: 'Save',
       saving: 'Saving...',
@@ -197,6 +205,10 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       loadingActionGroups: '正在读取动作组...',
       noActionGroupsFound: '当前模型未识别到动作组。',
       actionGroupOptionsLoaded: count => `已通过 easy-live2d 识别到 ${count} 个动作组。`,
+      manualBindingStatus: group => `用户指定：${group}`,
+      autoBindingStatus: group => `自动识别：${group}`,
+      unresolvedBindingStatus: '未识别到对应动作组。',
+      manualBindingOption: group => `${group}（用户指定）`,
       cancel: '取消',
       save: '保存',
       saving: '保存中...',

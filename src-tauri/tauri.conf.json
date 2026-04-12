@@ -22,7 +22,7 @@
         "maxHeight": 600,
         "resizable": false,
         "transparent": true,
-        "backgroundColor": "#000000",
+        "backgroundColor": "#00000000",
         "decorations": false,
         "shadow": false,
         "fullscreen": false,

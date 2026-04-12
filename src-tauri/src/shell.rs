@@ -664,9 +664,9 @@ fn apply_main_window_size(window: &WebviewWindow, preset: &WindowSizePreset) -> 
 
 fn window_size_dimensions(preset: &WindowSizePreset) -> (f64, f64) {
     match preset {
-        WindowSizePreset::Small => (280.0, 480.0),
-        WindowSizePreset::Medium => (340.0, 600.0),
-        WindowSizePreset::Large => (400.0, 720.0),
+        WindowSizePreset::Small => (280.0, 520.0),
+        WindowSizePreset::Medium => (340.0, 640.0),
+        WindowSizePreset::Large => (400.0, 760.0),
     }
 }
 

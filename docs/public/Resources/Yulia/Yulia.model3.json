@@ -8,15 +8,13 @@
 		"Physics": "Yulia.physics3.json",
 		"DisplayInfo": "Yulia.cdi3.json",
 		"Motions": {
-			"Complete": [
+			"Idle": [
 				{
 					"File": "motions/Completed-1.motion3.json"
 				},
 				{
 					"File": "motions/Completed-2.motion3.json"
-				}
-			],
-			"Idle": [
+				},
 				{
 					"File": "motions/Idle-1.motion3.json"
 				},
@@ -34,17 +32,13 @@
 				},
 				{
 					"File": "motions/Idle-6.motion3.json"
-				}
-			],
-			"Thinking": [
+				},
 				{
 					"File": "motions/Thinking-1.motion3.json"
 				},
 				{
 					"File": "motions/Thinking-2.motion3.json"
-				}
-			],
-			"ToolUse": [
+				},
 				{
 					"File": "motions/ToolUse.motion3.json"
 				}

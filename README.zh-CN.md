@@ -120,7 +120,7 @@ pnpm release:sync-version  # 同步 package.json / tauri.conf.json / Cargo.toml 
 
 保存设置前，应用会先校验模型目录。可用的模型目录至少需要包含合法的 `.model3.json` 入口文件，以及它引用到的资源文件。
 
-如果希望桌宠在不同状态下有明显动作反馈，建议在模型里准备对应的 motion group，并在设置页里逐项绑定。某个状态没有单独绑定时，应用会尽量回退到 `idle` 的绑定。
+如果希望桌宠在不同状态下有明显动作反馈，建议在模型里准备对应的 motion group，并在设置页里逐项绑定。某个状态没有单独绑定时，应用会尝试直接匹配常见动作组名，例如 `Idle`、`Thinking`、`ToolUse`、`Complete`；如果没有匹配到，该状态就保持未绑定。
 
 ## 更新与发布
 

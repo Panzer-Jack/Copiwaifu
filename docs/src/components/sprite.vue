@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Config, Live2DSprite, LogLevel } from 'easy-live2d'
+import { Config, Live2DSprite, LogLevel, Priority } from 'easy-live2d'
 import { Application, Ticker } from 'pixi.js'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useSpeechBubble } from '@/composables/useSpeechBubble'

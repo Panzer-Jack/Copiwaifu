@@ -119,7 +119,7 @@ If no custom model is selected, Copiwaifu uses the bundled `Yulia` model.
 
 Custom model folders are validated before saving. A usable model directory should include a valid `.model3.json` entry file and its referenced assets.
 
-To make state animations useful, define motion groups in your model and bind them in settings. If a state has no explicit binding, Copiwaifu falls back to the idle binding when possible.
+To make state animations useful, define motion groups in your model and bind them in settings. If a state has no explicit binding, Copiwaifu tries a direct auto-match for common group names such as `Idle`, `Thinking`, `ToolUse`, and `Complete`. If no match is found, that state remains unbound.
 
 ## Updates And Release Flow
 

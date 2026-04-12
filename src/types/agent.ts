@@ -43,6 +43,20 @@ export interface MotionGroupOption {
   label: string
 }
 
+export const ACTION_GROUP_BINDING_SOURCE = {
+  MANUAL: 'manual',
+  AUTO: 'auto',
+  UNRESOLVED: 'unresolved',
+} as const
+
+export type ActionGroupBindingSource =
+  typeof ACTION_GROUP_BINDING_SOURCE[keyof typeof ACTION_GROUP_BINDING_SOURCE]
+
+export interface ResolvedActionGroupBinding {
+  source: ActionGroupBindingSource
+  group: string | null
+}
+
 export interface AppSettings {
   name: string
   language: AppLanguage
@@ -102,6 +116,70 @@ export function createEmptyActionGroupBindings(): Record<TAgentState, string | n
     [AGENT_STATE.ERROR]: null,
     [AGENT_STATE.COMPLETE]: null,
     [AGENT_STATE.NEEDS_ATTENTION]: null,
+  }
+}
+
+const AUTO_MATCH_GROUP_NAMES: Record<TAgentState, string[]> = {
+  [AGENT_STATE.IDLE]: ['idle'],
+  [AGENT_STATE.THINKING]: ['thinking'],
+  [AGENT_STATE.TOOL_USE]: ['tooluse'],
+  [AGENT_STATE.ERROR]: ['error'],
+  [AGENT_STATE.COMPLETE]: ['complete', 'completed'],
+  [AGENT_STATE.NEEDS_ATTENTION]: ['needsattention'],
+}
+
+function normalizeMotionGroupName(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
+function motionGroupName(item: MotionGroupOption | string) {
+  return typeof item === 'string' ? item : item.group
+}
+
+export function detectAutoActionGroup(
+  state: TAgentState,
+  motionGroups: readonly (MotionGroupOption | string)[],
+) {
+  const aliases = new Set(AUTO_MATCH_GROUP_NAMES[state].map(normalizeMotionGroupName))
+
+  for (const item of motionGroups) {
+    const group = motionGroupName(item).trim()
+    if (!group) {
+      continue
+    }
+
+    if (aliases.has(normalizeMotionGroupName(group))) {
+      return group
+    }
+  }
+
+  return null
+}
+
+export function resolveActionGroupBinding(
+  state: TAgentState,
+  bindings: Record<TAgentState, string | null>,
+  motionGroups: readonly (MotionGroupOption | string)[],
+): ResolvedActionGroupBinding {
+  const manualBinding = bindings[state]?.trim()
+  if (manualBinding) {
+    return {
+      source: ACTION_GROUP_BINDING_SOURCE.MANUAL,
+      group: manualBinding,
+    }
+  }
+
+  const autoBinding = detectAutoActionGroup(state, motionGroups)
+  if (autoBinding) {
+    return {
+      source: ACTION_GROUP_BINDING_SOURCE.AUTO,
+      group: autoBinding,
+    }
+  }
+
+  return {
+    source: ACTION_GROUP_BINDING_SOURCE.UNRESOLVED,
+    group: null,
   }
 }
 

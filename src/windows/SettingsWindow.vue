@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { CubismSetting, Live2DSprite } from 'easy-live2d'
-import { Application, Ticker } from 'pixi.js'
 import { open } from '@tauri-apps/plugin-dialog'
 import { computed, onUnmounted, reactive, ref, watch } from 'vue'
+import { readAvailableMotionGroups } from '../live2d/model'
 import { getLanguageCopy } from '../i18n'
 import {
+  ACTION_GROUP_BINDING_SOURCE,
   AGENT_STATE_ORDER,
   APP_LANGUAGE,
   WINDOW_SIZE_PRESET,
   createEmptyActionGroupBindings,
+  resolveActionGroupBinding,
 } from '../types/agent'
 import type {
   AppBootstrap,
@@ -36,6 +37,7 @@ const form = reactive<AppSettings>(createFormState(props.bootstrap.settings))
 const currentScan = ref<ModelScanResult>(props.bootstrap.modelScan)
 const motionGroupOptions = ref<MotionGroupOption[]>(props.bootstrap.modelScan.availableMotionGroups)
 const ui = computed(() => getLanguageCopy(form.language))
+const detectedMotionGroupCount = computed(() => motionGroupOptions.value.length)
 const NAME_MAX_LENGTH = 16
 const DEFAULT_MODEL_DIRECTORY = '/Resources/Yulia'
 let motionGroupLoadToken = 0
@@ -95,27 +97,6 @@ function clearNotice() {
   successMessage.value = ''
 }
 
-function buildMotionGroupOptions(groups: string[]): MotionGroupOption[] {
-  const seen = new Set<string>()
-  const options: MotionGroupOption[] = []
-
-  for (const group of groups) {
-    const trimmedGroup = group.trim()
-    if (!trimmedGroup || seen.has(trimmedGroup)) {
-      continue
-    }
-
-    seen.add(trimmedGroup)
-    options.push({
-      id: trimmedGroup,
-      group: trimmedGroup,
-      label: trimmedGroup,
-    })
-  }
-
-  return options
-}
-
 function joinModelPath(basePath: string, relativePath: string) {
   return `${basePath.replace(/[\\/]+$/, '')}/${relativePath.replace(/^[\\/]+/, '')}`
 }
@@ -132,78 +113,34 @@ const selectableMotionGroupOptions = computed(() => {
 
     seen.add(binding)
     options.push({
-      id: binding,
+      id: `${state}:${binding}`,
       group: binding,
-      label: binding,
+      label: ui.value.settings.manualBindingOption(binding),
     })
   }
 
   return options
 })
 
-async function createMotionReaderSprite() {
-  if (form.modelDirectory) {
-    const modelEntryPath = joinModelPath(form.modelDirectory, currentScan.value.modelEntryFile)
-    const modelEntryUrl = convertFileSrc(modelEntryPath)
-    const response = await fetch(modelEntryUrl)
-
-    if (!response.ok) {
-      throw new Error(`failed_to_read_model_json: ${response.status}`)
-    }
-
-    const modelJSON = await response.json()
-    const modelSetting = new CubismSetting({ modelJSON })
-
-    modelSetting.redirectPath(({ file }) => {
-      return convertFileSrc(joinModelPath(form.modelDirectory as string, file))
-    })
-
-    return new Live2DSprite({
-      modelSetting,
-      ticker: Ticker.shared,
-    })
-  }
-
-  return new Live2DSprite({
-    modelPath: joinModelPath(DEFAULT_MODEL_DIRECTORY, currentScan.value.modelEntryFile),
-    ticker: Ticker.shared,
-  })
-}
-
-async function readMotionGroupOptionsWithEasyLive2D() {
-  const app = new Application()
-  let sprite: Live2DSprite | null = null
-
-  await app.init({
-    canvas: document.createElement('canvas'),
-    width: 1,
-    height: 1,
-    resolution: 1,
-    autoDensity: true,
-    backgroundAlpha: 0,
-  })
-
-  try {
-    sprite = await createMotionReaderSprite()
-    app.stage.addChild(sprite as any)
-    await sprite.ready
-    return buildMotionGroupOptions(sprite.getMotions().map(motion => motion.group))
-  }
-  finally {
-    if (sprite) {
-      app.stage.removeChild(sprite as any)
-      sprite.destroy()
-    }
-    app.destroy(true)
-  }
-}
+const resolvedActionGroupBindings = computed(() => {
+  return Object.fromEntries(
+    AGENT_STATE_ORDER.map(state => [
+      state,
+      resolveActionGroupBinding(state, form.actionGroupBindings, motionGroupOptions.value),
+    ]),
+  ) as Record<TAgentState, ReturnType<typeof resolveActionGroupBinding>>
+})
 
 async function loadMotionGroupOptions() {
   const token = ++motionGroupLoadToken
   isLoadingMotionGroups.value = true
 
   try {
-    const options = await readMotionGroupOptionsWithEasyLive2D()
+    const modelEntryUrl = form.modelDirectory
+      ? convertFileSrc(joinModelPath(form.modelDirectory, currentScan.value.modelEntryFile))
+      : joinModelPath(DEFAULT_MODEL_DIRECTORY, currentScan.value.modelEntryFile)
+    const options = await readAvailableMotionGroups({ modelEntryUrl })
+
     if (token !== motionGroupLoadToken) {
       return
     }
@@ -322,6 +259,20 @@ function cancel() {
 function setActionGroupBinding(state: TAgentState, value: string) {
   const trimmedValue = value.trim()
   form.actionGroupBindings[state] = trimmedValue || null
+}
+
+function actionGroupBindingStatus(state: TAgentState) {
+  const resolved = resolvedActionGroupBindings.value[state]
+
+  if (resolved.source === ACTION_GROUP_BINDING_SOURCE.MANUAL && resolved.group) {
+    return ui.value.settings.manualBindingStatus(resolved.group)
+  }
+
+  if (resolved.source === ACTION_GROUP_BINDING_SOURCE.AUTO && resolved.group) {
+    return ui.value.settings.autoBindingStatus(resolved.group)
+  }
+
+  return ui.value.settings.unresolvedBindingStatus
 }
 </script>
 
@@ -450,7 +401,17 @@ function setActionGroupBinding(state: TAgentState, value: string) {
             :key="state"
             class="binding-row"
           >
-            <span>{{ ui.stateLabels[state] }}</span>
+            <span class="binding-row__meta">
+              <strong>{{ ui.stateLabels[state] }}</strong>
+              <small
+                :class="[
+                  'binding-row__status',
+                  `binding-row__status--${resolvedActionGroupBindings[state].source}`,
+                ]"
+              >
+                {{ actionGroupBindingStatus(state) }}
+              </small>
+            </span>
             <select
               class="field__select"
               :value="form.actionGroupBindings[state] ?? ''"
@@ -472,8 +433,8 @@ function setActionGroupBinding(state: TAgentState, value: string) {
         </div>
         <p class="field__hint">
           {{
-            selectableMotionGroupOptions.length > 0
-              ? ui.settings.actionGroupOptionsLoaded(selectableMotionGroupOptions.length)
+            detectedMotionGroupCount > 0
+              ? ui.settings.actionGroupOptionsLoaded(detectedMotionGroupCount)
               : ui.settings.noActionGroupsFound
           }}
         </p>
@@ -658,8 +619,37 @@ function setActionGroupBinding(state: TAgentState, value: string) {
   display: grid;
   grid-template-columns: 1fr 1.3fr;
   gap: 12px;
-  align-items: center;
+  align-items: start;
   font-size: 13px;
+}
+
+.binding-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.binding-row__meta strong {
+  color: #33514f;
+  font-size: 13px;
+}
+
+.binding-row__status {
+  color: #617a78;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.binding-row__status--manual {
+  color: #7a4a1e;
+}
+
+.binding-row__status--auto {
+  color: #2f6860;
+}
+
+.binding-row__status--unresolved {
+  color: #8a5b35;
 }
 
 .notice {
