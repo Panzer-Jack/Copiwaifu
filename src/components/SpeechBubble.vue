@@ -1,8 +1,14 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+import type { WindowSizePreset } from '../types/agent'
+
+const props = defineProps<{
   text: string
   visible: boolean
+  windowSize: WindowSizePreset
 }>()
+
+const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
 </script>
 
 <template>
@@ -10,6 +16,7 @@ defineProps<{
     <div
       v-if="visible"
       class="speech-bubble"
+      :class="bubbleClassName"
     >
       <span class="speech-bubble__text">{{ text }}</span>
     </div>
@@ -18,18 +25,26 @@ defineProps<{
 
 <style scoped>
 .speech-bubble {
+  --bubble-width: min(172px, calc(100vw - 16px));
+  --bubble-max-height: 120px;
+  --bubble-min-height: 50px;
+  --bubble-padding: 12px 18px;
+  --bubble-radius: 18px;
+  --bubble-border-width: 2px;
+  --bubble-font-size: 14px;
+  --bubble-pointer-size: 10px;
   position: absolute;
   top: 4%;
   left: 50%;
-  width: min(172px, calc(100vw - 16px));
-  max-height: 120px;
-  min-height: 50px;
+  width: var(--bubble-width);
+  max-height: var(--bubble-max-height);
+  min-height: var(--bubble-min-height);
   box-sizing: border-box;
   overflow: hidden;
-  padding: 12px 18px;
+  padding: var(--bubble-padding);
   background: rgba(220, 245, 230, 0.65);
-  border: 2px solid rgba(150, 210, 170, 0.6);
-  border-radius: 18px;
+  border: var(--bubble-border-width) solid rgba(150, 210, 170, 0.6);
+  border-radius: var(--bubble-radius);
   backdrop-filter: blur(12px);
   filter: drop-shadow(0 1px 6px rgba(160, 220, 180, 0.25));
   pointer-events: none;
@@ -38,23 +53,56 @@ defineProps<{
   transform: translateX(-50%);
 }
 
+.speech-bubble--small {
+  --bubble-width: min(156px, calc(100vw - 16px));
+  --bubble-max-height: 102px;
+  --bubble-min-height: 42px;
+  --bubble-padding: 10px 14px;
+  --bubble-radius: 14px;
+  --bubble-border-width: 1.5px;
+  --bubble-font-size: 12px;
+  --bubble-pointer-size: 8px;
+}
+
+.speech-bubble--medium {
+  --bubble-width: min(184px, calc(100vw - 16px));
+  --bubble-max-height: 120px;
+  --bubble-min-height: 50px;
+  --bubble-padding: 12px 18px;
+  --bubble-radius: 18px;
+  --bubble-border-width: 2px;
+  --bubble-font-size: 14px;
+  --bubble-pointer-size: 10px;
+}
+
+.speech-bubble--large {
+  --bubble-width: min(228px, calc(100vw - 20px));
+  --bubble-max-height: 148px;
+  --bubble-min-height: 60px;
+  --bubble-padding: 14px 22px;
+  --bubble-radius: 22px;
+  --bubble-border-width: 2px;
+  --bubble-font-size: 15px;
+  --bubble-pointer-size: 12px;
+}
+
 /* 底部三角尖角 */
 .speech-bubble::after {
   content: '';
   position: absolute;
-  bottom: -10px;
+  bottom: calc(var(--bubble-pointer-size) * -1);
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 10px solid rgba(220, 245, 230, 0.65);
+  border-left: var(--bubble-pointer-size) solid transparent;
+  border-right: var(--bubble-pointer-size) solid transparent;
+  border-top: var(--bubble-pointer-size) solid rgba(220, 245, 230, 0.65);
 }
 
 .speech-bubble__text {
   display: block;
-  font-size: 14px;
+  font-size: var(--bubble-font-size);
   line-height: 1.6;
   color: #4a5568;
   font-weight: 500;

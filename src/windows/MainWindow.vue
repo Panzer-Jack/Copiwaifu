@@ -360,6 +360,7 @@ watch(currentState, (state, previous) => {
     <SpeechBubble
       :text="displayedText"
       :visible="isVisible"
+      :window-size="props.bootstrap.settings.windowSize"
     />
   </div>
 </template>
