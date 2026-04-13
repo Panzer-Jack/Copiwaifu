@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Outfit', 'M PLUS Rounded 1c', 'PingFang SC', sans-serif;
+}
+
+html,
+body {
+  font-family: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.font-display {
+  font-family: 'M PLUS Rounded 1c', 'Outfit', 'PingFang SC', sans-serif;
+}
