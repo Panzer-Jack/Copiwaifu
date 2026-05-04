@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Sidecar build output
+sidecar/ai-runtime/bundle/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
