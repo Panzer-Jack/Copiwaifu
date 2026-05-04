@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    time::Instant,
-};
+use std::{collections::HashMap, time::Instant};
 
 use super::{
     agent::{session_key, SESSION_TTL},
@@ -68,18 +65,17 @@ impl NavigatorState {
 
     pub fn snapshot(&self) -> NavigatorStatus {
         NavigatorStatus {
-            current: self
-                .last_focus_snapshot
-                .clone()
-                .unwrap_or_else(|| presentation::derive_focus_snapshot(&self.sessions, self.server_port)),
+            current: self.last_focus_snapshot.clone().unwrap_or_else(|| {
+                presentation::derive_focus_snapshot(&self.sessions, self.server_port)
+            }),
             server_port: self.server_port,
         }
     }
 
     pub fn sessions_snapshot(&self) -> NavigatorSessionsPayload {
-        self.last_sessions_snapshot
-            .clone()
-            .unwrap_or_else(|| presentation::derive_sessions_payload(&self.sessions, self.server_port))
+        self.last_sessions_snapshot.clone().unwrap_or_else(|| {
+            presentation::derive_sessions_payload(&self.sessions, self.server_port)
+        })
     }
 
     pub fn apply_event(&mut self, event: AgentEvent) -> Vec<NavigatorEmission> {
@@ -102,15 +98,12 @@ impl NavigatorState {
     }
 
     pub fn cleanup_stale(&mut self) -> Vec<NavigatorEmission> {
-        let now = Instant::now();
-        let before = self.sessions.len();
+        self.cleanup_stale_at(Instant::now())
+    }
 
+    fn cleanup_stale_at(&mut self, now: Instant) -> Vec<NavigatorEmission> {
         self.sessions
             .retain(|_, session| now.duration_since(session.updated_at) < SESSION_TTL);
-
-        if self.sessions.len() == before {
-            return vec![];
-        }
 
         self.collect_emissions(now)
     }
@@ -142,6 +135,8 @@ impl NavigatorState {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::super::events::{AgentEvent, AgentState, AgentType, EventData, EventType};
     use super::{NavigatorEmission, NavigatorState};
 
@@ -167,6 +162,12 @@ mod tests {
         }
     }
 
+    fn has_state_change(emissions: &[NavigatorEmission]) -> bool {
+        emissions
+            .iter()
+            .any(|emission| matches!(emission, NavigatorEmission::StateChange(_)))
+    }
+
     #[test]
     fn active_session_beats_stale_complete_snapshot() {
         let mut state = NavigatorState::new();
@@ -174,7 +175,11 @@ mod tests {
         let first = state.apply_event(event(AgentType::Codex, "done-session", EventType::Complete));
         assert_eq!(state_from(first), AgentState::Complete);
 
-        let second = state.apply_event(event(AgentType::Codex, "active-session", EventType::Thinking));
+        let second = state.apply_event(event(
+            AgentType::Codex,
+            "active-session",
+            EventType::Thinking,
+        ));
         assert_eq!(state_from(second), AgentState::Thinking);
     }
 
@@ -185,7 +190,31 @@ mod tests {
         let first = state.apply_event(event(AgentType::Codex, "same-session", EventType::Complete));
         assert_eq!(state_from(first), AgentState::Complete);
 
-        let second = state.apply_event(event(AgentType::Codex, "same-session", EventType::Thinking));
+        let second =
+            state.apply_event(event(AgentType::Codex, "same-session", EventType::Thinking));
         assert_eq!(state_from(second), AgentState::Thinking);
+    }
+
+    #[test]
+    fn cleanup_tick_releases_delayed_idle_after_complete_min_duration() {
+        let mut state = NavigatorState::new();
+
+        let first = state.apply_event(event(AgentType::Codex, "same-session", EventType::Complete));
+        assert_eq!(state_from(first), AgentState::Complete);
+
+        let second = state.apply_event(event(
+            AgentType::Codex,
+            "same-session",
+            EventType::SessionEnd,
+        ));
+        assert!(!has_state_change(&second));
+
+        let delayed_at = state
+            .last_focus_at
+            .expect("complete should set focus timestamp")
+            + Duration::from_secs(3);
+        let delayed = state.cleanup_stale_at(delayed_at);
+
+        assert_eq!(state_from(delayed), AgentState::Idle);
     }
 }

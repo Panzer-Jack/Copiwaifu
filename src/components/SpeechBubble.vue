@@ -64,6 +64,17 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-pointer-size: 8px;
 }
 
+.speech-bubble--tiny {
+  --bubble-width: min(112px, calc(100vw - 12px));
+  --bubble-max-height: 72px;
+  --bubble-min-height: 32px;
+  --bubble-padding: 7px 10px;
+  --bubble-radius: 10px;
+  --bubble-border-width: 1.5px;
+  --bubble-font-size: 10px;
+  --bubble-pointer-size: 6px;
+}
+
 .speech-bubble--medium {
   --bubble-width: min(184px, calc(100vw - 16px));
   --bubble-max-height: 120px;
