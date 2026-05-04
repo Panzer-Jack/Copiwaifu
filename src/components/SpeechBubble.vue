@@ -36,9 +36,10 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-font-size: 14px;
   --bubble-pointer-size: 10px;
   --bubble-outer-gap: 8px;
+  --bubble-offset-y: 40px;
   position: absolute;
   left: 50%;
-  bottom: var(--bubble-pointer-size);
+  bottom: calc(var(--bubble-pointer-size) - var(--bubble-offset-y));
   width: var(--bubble-width);
   max-height: var(--bubble-max-height);
   min-height: var(--bubble-min-height);
@@ -64,6 +65,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-border-width: 1.5px;
   --bubble-font-size: 12px;
   --bubble-pointer-size: 8px;
+  --bubble-offset-y: 30px;
 }
 
 .speech-bubble--tiny {
@@ -74,6 +76,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-border-width: 1.5px;
   --bubble-font-size: 10px;
   --bubble-pointer-size: 6px;
+  --bubble-offset-y: 20px;
 }
 
 .speech-bubble--medium {
@@ -84,6 +87,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-border-width: 2px;
   --bubble-font-size: 14px;
   --bubble-pointer-size: 10px;
+  --bubble-offset-y: 40px;
 }
 
 .speech-bubble--large {
@@ -94,6 +98,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-border-width: 2px;
   --bubble-font-size: 15px;
   --bubble-pointer-size: 12px;
+  --bubble-offset-y: 70px;
 }
 
 .speech-bubble--huge {
@@ -104,6 +109,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-border-width: 2.5px;
   --bubble-font-size: 16px;
   --bubble-pointer-size: 14px;
+  --bubble-offset-y: 100px;
 }
 
 /* 底部三角尖角 */

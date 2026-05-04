@@ -448,7 +448,7 @@ watch(
   overflow: visible;
   cursor: move;
   z-index: 2;
-  background: rgba(255, 100, 100, 0.15);
+  /* background: rgba(255, 100, 100, 0.15); */
 }
 
 .live2d-region {
@@ -457,7 +457,7 @@ watch(
   /* overflow: visible; */
   cursor: move;
   z-index: 1;
-  background: rgba(100, 100, 255, 0.15);
+  /* background: rgba(100, 100, 255, 0.15); */
 }
 
 #live2d {
