@@ -334,5 +334,7 @@ fn max_ai_talk_length(window_size: &WindowSizePreset, language: AppLanguage) -> 
         (WindowSizePreset::Medium, false) => 80,
         (WindowSizePreset::Large, true) => 60,
         (WindowSizePreset::Large, false) => 110,
+        (WindowSizePreset::Huge, true) => 80,
+        (WindowSizePreset::Huge, false) => 140,
     }
 }

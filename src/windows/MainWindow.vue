@@ -438,20 +438,26 @@ watch(
   --speech-region-height: 172px;
 }
 
+.container--huge {
+  --speech-region-height: 192px;
+}
+
 .speech-region {
   position: relative;
   min-height: 0;
   overflow: visible;
   cursor: move;
   z-index: 2;
+  /* background: rgba(255, 100, 100, 0.15); */
 }
 
 .live2d-region {
   position: relative;
   min-height: 0;
-  overflow: hidden;
+  /* overflow: visible; */
   cursor: move;
   z-index: 1;
+  /* background: rgba(100, 100, 255, 0.15); */
 }
 
 #live2d {

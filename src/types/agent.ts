@@ -35,6 +35,7 @@ export const WINDOW_SIZE_PRESET = {
   SMALL: 'small',
   MEDIUM: 'medium',
   LARGE: 'large',
+  HUGE: 'huge',
 } as const
 
 export type WindowSizePreset = typeof WINDOW_SIZE_PRESET[keyof typeof WINDOW_SIZE_PRESET]

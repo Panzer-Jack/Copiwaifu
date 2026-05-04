@@ -34,7 +34,7 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
   })
 
   Config.MotionGroupIdle = 'Idle'
-  Config.ViewScale = 1.7
+  Config.ViewScale = 1.46
   Config.CubismLoggingLevel = LogLevel.LogLevel_Off
   Config.MouseFollow = true
 

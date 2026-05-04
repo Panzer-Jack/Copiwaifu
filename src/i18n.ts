@@ -184,6 +184,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       [WINDOW_SIZE_PRESET.SMALL]: 'Petite',
       [WINDOW_SIZE_PRESET.MEDIUM]: 'Standard',
       [WINDOW_SIZE_PRESET.LARGE]: 'Large',
+      [WINDOW_SIZE_PRESET.HUGE]: 'Huge',
     },
     visibilityLabel: visible => (visible ? 'Hide for Now' : 'Return to Stage'),
     pet: {
@@ -290,6 +291,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       [WINDOW_SIZE_PRESET.SMALL]: '小只',
       [WINDOW_SIZE_PRESET.MEDIUM]: '标准',
       [WINDOW_SIZE_PRESET.LARGE]: '大只',
+      [WINDOW_SIZE_PRESET.HUGE]: '超大只',
     },
     visibilityLabel: visible => (visible ? '暂时隐身' : '重新登场'),
     pet: {
@@ -396,6 +398,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       [WINDOW_SIZE_PRESET.SMALL]: '小さめ',
       [WINDOW_SIZE_PRESET.MEDIUM]: '標準',
       [WINDOW_SIZE_PRESET.LARGE]: '大きめ',
+      [WINDOW_SIZE_PRESET.HUGE]: '特大',
     },
     visibilityLabel: visible => (visible ? 'いったん隠す' : '再登場'),
     pet: {
