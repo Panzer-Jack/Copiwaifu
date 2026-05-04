@@ -18,44 +18,46 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
       class="speech-bubble"
       :class="bubbleClassName"
     >
-      <span class="speech-bubble__text">{{ text }}</span>
+      <div class="speech-bubble__body">
+        <span class="speech-bubble__text">{{ text }}</span>
+      </div>
     </div>
   </Transition>
 </template>
 
 <style scoped>
 .speech-bubble {
-  --bubble-width: min(172px, calc(100vw - 16px));
-  --bubble-max-height: 120px;
+  --bubble-width: min(220px, calc(100vw - 16px));
+  --bubble-max-height: calc(100% - var(--bubble-pointer-size) - var(--bubble-outer-gap));
   --bubble-min-height: 50px;
   --bubble-padding: 12px 18px;
   --bubble-radius: 18px;
   --bubble-border-width: 2px;
   --bubble-font-size: 14px;
   --bubble-pointer-size: 10px;
+  --bubble-outer-gap: 8px;
   position: absolute;
-  top: 4%;
   left: 50%;
+  bottom: var(--bubble-pointer-size);
   width: var(--bubble-width);
   max-height: var(--bubble-max-height);
   min-height: var(--bubble-min-height);
   box-sizing: border-box;
-  overflow: hidden;
-  padding: var(--bubble-padding);
+  display: flex;
+  overflow: visible;
   background: rgba(220, 245, 230, 0.65);
   border: var(--bubble-border-width) solid rgba(150, 210, 170, 0.6);
   border-radius: var(--bubble-radius);
   backdrop-filter: blur(12px);
   filter: drop-shadow(0 1px 6px rgba(160, 220, 180, 0.25));
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 10;
   transform-origin: bottom center;
   transform: translateX(-50%);
 }
 
 .speech-bubble--small {
-  --bubble-width: min(156px, calc(100vw - 16px));
-  --bubble-max-height: 102px;
+  --bubble-width: min(224px, calc(100vw - 16px));
   --bubble-min-height: 42px;
   --bubble-padding: 10px 14px;
   --bubble-radius: 14px;
@@ -65,8 +67,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
 }
 
 .speech-bubble--tiny {
-  --bubble-width: min(112px, calc(100vw - 12px));
-  --bubble-max-height: 72px;
+  --bubble-width: min(176px, calc(100vw - 12px));
   --bubble-min-height: 32px;
   --bubble-padding: 7px 10px;
   --bubble-radius: 10px;
@@ -76,8 +77,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
 }
 
 .speech-bubble--medium {
-  --bubble-width: min(184px, calc(100vw - 16px));
-  --bubble-max-height: 120px;
+  --bubble-width: min(280px, calc(100vw - 16px));
   --bubble-min-height: 50px;
   --bubble-padding: 12px 18px;
   --bubble-radius: 18px;
@@ -87,8 +87,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
 }
 
 .speech-bubble--large {
-  --bubble-width: min(228px, calc(100vw - 20px));
-  --bubble-max-height: 148px;
+  --bubble-width: min(336px, calc(100vw - 20px));
   --bubble-min-height: 60px;
   --bubble-padding: 14px 22px;
   --bubble-radius: 22px;
@@ -111,6 +110,18 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   border-top: var(--bubble-pointer-size) solid rgba(220, 245, 230, 0.65);
 }
 
+.speech-bubble__body {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--bubble-padding);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(95, 145, 115, 0.35) transparent;
+}
+
 .speech-bubble__text {
   display: block;
   font-family: 'M PLUS Rounded 1c', 'Outfit', 'PingFang SC', sans-serif;
@@ -119,6 +130,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   color: #4a5568;
   font-weight: 500;
   word-break: break-word;
+  white-space: pre-wrap;
   text-align: center;
 }
 

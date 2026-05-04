@@ -245,16 +245,36 @@ watch(
 </script>
 
 <template>
-  <div class="safe-top" />
+  <div
+    class="safe-top"
+    data-tauri-drag-region
+  />
   <div
     class="container"
+    :class="`container--${props.bootstrap.settings.windowSize}`"
     @contextmenu="openMenu"
   >
-    <canvas
-      id="live2d"
-      ref="canvasRef"
+    <section
+      class="speech-region"
       data-tauri-drag-region
-    />
+    >
+      <SpeechBubble
+        :text="displayedText"
+        :visible="isVisible"
+        :window-size="props.bootstrap.settings.windowSize"
+      />
+    </section>
+
+    <section
+      class="live2d-region"
+      data-tauri-drag-region
+    >
+      <canvas
+        id="live2d"
+        ref="canvasRef"
+        data-tauri-drag-region
+      />
+    </section>
 
     <PetContextMenu
       :visible="menuState.visible"
@@ -269,12 +289,6 @@ watch(
       @toggle-visibility="toggleVisibility"
       @exit="exitApp"
     />
-
-    <SpeechBubble
-      :text="displayedText"
-      :visible="isVisible"
-      :window-size="props.bootstrap.settings.windowSize"
-    />
   </div>
 </template>
 
@@ -282,15 +296,51 @@ watch(
 
 .safe-top {
   height: var(--main-window-safe-top-height, 20px);
+  cursor: move;
 }
 .container {
+  --speech-region-height: 144px;
   position: relative;
+  display: grid;
+  grid-template-rows: var(--speech-region-height) minmax(0, 1fr);
   width: 100vw;
   height: calc(100vh - var(--main-window-safe-top-height, 20px));
   overflow: hidden;
   background: transparent;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.container--tiny {
+  --speech-region-height: 92px;
+}
+
+.container--small {
+  --speech-region-height: 124px;
+}
+
+.container--medium {
+  --speech-region-height: 144px;
+}
+
+.container--large {
+  --speech-region-height: 172px;
+}
+
+.speech-region {
+  position: relative;
+  min-height: 0;
+  overflow: visible;
+  cursor: move;
+  z-index: 2;
+}
+
+.live2d-region {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  cursor: move;
+  z-index: 1;
 }
 
 #live2d {
