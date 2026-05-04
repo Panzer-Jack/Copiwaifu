@@ -34,7 +34,7 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
   })
 
   Config.MotionGroupIdle = 'Idle'
-  Config.ViewScale = 1.8
+  Config.ViewScale = 1.7
   Config.CubismLoggingLevel = LogLevel.LogLevel_Off
   Config.MouseFollow = true
 
@@ -73,7 +73,7 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
 
     runtime = createLive2DRuntime({
       canvas,
-      resizeTo: window,
+      resizeTo: canvas.parentElement ?? window,
       resolution: Math.max(window.devicePixelRatio || 1, 1),
     })
 

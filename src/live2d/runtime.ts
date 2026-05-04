@@ -2,6 +2,8 @@ import type { Live2DSprite } from 'easy-live2d'
 import { Application } from 'pixi.js'
 import { createLive2DModelSprite } from './model'
 
+const SPRITE_FIT_PADDING = 8
+
 export interface MountLive2DModelOptions {
   modelEntryUrl: string
   onReady?: (sprite: Live2DSprite) => void
@@ -19,6 +21,29 @@ function waitForNextFrame() {
       resolve()
     })
   })
+}
+
+function fitSpriteToViewport(sprite: Live2DSprite, width: number, height: number) {
+  const modelSize = sprite.getModelCanvasSize()
+  const availableWidth = Math.max(1, width - SPRITE_FIT_PADDING * 2)
+  const availableHeight = Math.max(1, height - SPRITE_FIT_PADDING * 2)
+
+  if (!modelSize || modelSize.width <= 0 || modelSize.height <= 0) {
+    sprite.width = availableWidth
+    sprite.height = availableHeight
+    sprite.x = SPRITE_FIT_PADDING
+    sprite.y = SPRITE_FIT_PADDING
+    return
+  }
+
+  const scale = Math.min(availableWidth / modelSize.width, availableHeight / modelSize.height)
+  const fittedWidth = modelSize.width * scale
+  const fittedHeight = modelSize.height * scale
+
+  sprite.width = fittedWidth
+  sprite.height = fittedHeight
+  sprite.x = Math.round((width - fittedWidth) / 2)
+  sprite.y = Math.round(height - fittedHeight - SPRITE_FIT_PADDING)
 }
 
 export function createLive2DRuntime(options: CreateLive2DRuntimeOptions) {
@@ -83,8 +108,7 @@ export function createLive2DRuntime(options: CreateLive2DRuntimeOptions) {
       return
     }
 
-    sprite.width = width
-    sprite.height = height
+    fitSpriteToViewport(sprite, width, height)
     sprite.onResize()
   }
 
@@ -108,6 +132,7 @@ export function createLive2DRuntime(options: CreateLive2DRuntimeOptions) {
         return
       }
 
+      void syncSize()
       mountOptions.onReady?.(nextSprite)
     })
 
