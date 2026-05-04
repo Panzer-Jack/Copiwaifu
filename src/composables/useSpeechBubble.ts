@@ -10,6 +10,7 @@ const AI_TALK_LIMITS: Record<WindowSizePreset, { cjk: number, latin: number }> =
   [WINDOW_SIZE_PRESET.SMALL]: { cjk: 36, latin: 70 },
   [WINDOW_SIZE_PRESET.MEDIUM]: { cjk: 42, latin: 80 },
   [WINDOW_SIZE_PRESET.LARGE]: { cjk: 60, latin: 110 },
+  [WINDOW_SIZE_PRESET.HUGE]: { cjk: 80, latin: 140 },
 }
 
 export function useSpeechBubble() {

@@ -96,6 +96,16 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
   --bubble-pointer-size: 12px;
 }
 
+.speech-bubble--huge {
+  --bubble-width: min(400px, calc(100vw - 24px));
+  --bubble-min-height: 68px;
+  --bubble-padding: 16px 26px;
+  --bubble-radius: 24px;
+  --bubble-border-width: 2.5px;
+  --bubble-font-size: 16px;
+  --bubble-pointer-size: 14px;
+}
+
 /* 底部三角尖角 */
 .speech-bubble::after {
   content: '';

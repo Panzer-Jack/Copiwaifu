@@ -727,6 +727,14 @@ function sanitizeAiTalkHeaders(headers: Record<string, string>) {
             >
             <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.LARGE] }}</span>
           </label>
+          <label class="choice">
+            <input
+              v-model="form.windowSize"
+              :value="WINDOW_SIZE_PRESET.HUGE"
+              type="radio"
+            >
+            <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.HUGE] }}</span>
+          </label>
         </div>
       </div>
 

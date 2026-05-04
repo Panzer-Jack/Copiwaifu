@@ -41,6 +41,7 @@ pub enum WindowSizePreset {
     Small,
     Medium,
     Large,
+    Huge,
 }
 
 impl Default for WindowSizePreset {
@@ -783,10 +784,11 @@ fn apply_main_window_size(window: &WebviewWindow, preset: &WindowSizePreset) -> 
 
 fn window_size_dimensions(preset: &WindowSizePreset) -> (f64, f64) {
     match preset {
-        WindowSizePreset::Tiny => (200.0, 360.0),
-        WindowSizePreset::Small => (280.0, 520.0),
-        WindowSizePreset::Medium => (340.0, 640.0),
-        WindowSizePreset::Large => (400.0, 760.0),
+        WindowSizePreset::Tiny => (240.0, 456.0),
+        WindowSizePreset::Small => (320.0, 608.0),
+        WindowSizePreset::Medium => (400.0, 760.0),
+        WindowSizePreset::Large => (480.0, 912.0),
+        WindowSizePreset::Huge => (560.0, 1064.0),
     }
 }
 
