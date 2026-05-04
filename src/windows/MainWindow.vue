@@ -281,12 +281,12 @@ watch(
 <style scoped>
 
 .safe-top {
-  height: 20px;
+  height: var(--main-window-safe-top-height, 20px);
 }
 .container {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - var(--main-window-safe-top-height, 20px));
   overflow: hidden;
   background: transparent;
   user-select: none;
