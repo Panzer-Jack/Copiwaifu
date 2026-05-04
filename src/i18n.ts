@@ -146,6 +146,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       [AGENT_STATE.NEEDS_ATTENTION]: 'Awaiting Commander Confirmation',
     },
     windowSizeLabels: {
+      [WINDOW_SIZE_PRESET.TINY]: 'Tiny',
       [WINDOW_SIZE_PRESET.SMALL]: 'Petite',
       [WINDOW_SIZE_PRESET.MEDIUM]: 'Standard',
       [WINDOW_SIZE_PRESET.LARGE]: 'Large',
@@ -234,6 +235,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       [AGENT_STATE.NEEDS_ATTENTION]: '请长官确认',
     },
     windowSizeLabels: {
+      [WINDOW_SIZE_PRESET.TINY]: '超小只',
       [WINDOW_SIZE_PRESET.SMALL]: '小只',
       [WINDOW_SIZE_PRESET.MEDIUM]: '标准',
       [WINDOW_SIZE_PRESET.LARGE]: '大只',
@@ -322,6 +324,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       [AGENT_STATE.NEEDS_ATTENTION]: '確認待ち',
     },
     windowSizeLabels: {
+      [WINDOW_SIZE_PRESET.TINY]: '極小',
       [WINDOW_SIZE_PRESET.SMALL]: '小さめ',
       [WINDOW_SIZE_PRESET.MEDIUM]: '標準',
       [WINDOW_SIZE_PRESET.LARGE]: '大きめ',

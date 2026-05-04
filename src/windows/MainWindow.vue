@@ -9,7 +9,7 @@ import { useAgentState } from '../composables/useAgentState'
 import { useMainWindowLive2d } from '../composables/useMainWindowLive2d'
 import { useSpeechBubble } from '../composables/useSpeechBubble'
 import { AGENT_STATE } from '../types/agent'
-import type { AppBootstrap, TAgentState } from '../types/agent'
+import type { AgentType, AppBootstrap, TAgentState } from '../types/agent'
 
 const props = defineProps<{
   bootstrap: AppBootstrap
@@ -18,11 +18,15 @@ const props = defineProps<{
 const canvasRef = ref<HTMLCanvasElement>()
 const { isVisible, displayedText, say, hide } = useSpeechBubble()
 const { currentState, activeAgent, serverPort, sessionInfo } = useAgentState()
+const lastActiveAgent = ref<AgentType | null>(null)
 let idleGreetingTimer: ReturnType<typeof setInterval> | null = null
+let sameStateBubbleTimer: ReturnType<typeof setTimeout> | null = null
+let lastStateBubbleShownAt = 0
 
 const MENU_WIDTH = 176
 const MENU_HEIGHT = 196
 const MENU_EDGE_GAP = 12
+const SAME_STATE_BUBBLE_REFRESH_COOLDOWN_MS = 4500
 
 const { menuState, closeMenu, openMenu } = useContextMenu({
   width: MENU_WIDTH,
@@ -70,6 +74,13 @@ function randomGreeting() {
   return lines[Math.floor(Math.random() * lines.length)]
 }
 
+function currentAgentLabel() {
+  return formatAgentLabel(
+    activeAgent.value ?? lastActiveAgent.value,
+    props.bootstrap.settings.language,
+  )
+}
+
 function handleWindowKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     closeMenu()
@@ -78,7 +89,7 @@ function handleWindowKeydown(event: KeyboardEvent) {
 
 function bubbleTextForState(state: TAgentState) {
   const name = props.bootstrap.settings.name
-  const agentLabel = formatAgentLabel(activeAgent.value, props.bootstrap.settings.language)
+  const agentLabel = currentAgentLabel()
   if (state === AGENT_STATE.THINKING) {
     return ui.value.pet.thinking(agentLabel, name)
   }
@@ -95,6 +106,43 @@ function bubbleTextForState(state: TAgentState) {
     return ui.value.pet.needsAttention(agentLabel, name)
   }
   return ''
+}
+
+const stateBubbleText = computed(() => bubbleTextForState(currentState.value))
+
+function clearSameStateBubbleTimer() {
+  if (sameStateBubbleTimer) {
+    clearTimeout(sameStateBubbleTimer)
+    sameStateBubbleTimer = null
+  }
+}
+
+function isUrgentBubbleState(state: TAgentState) {
+  return state === AGENT_STATE.ERROR || state === AGENT_STATE.NEEDS_ATTENTION
+}
+
+function showStateBubble(text: string, duration = 2200) {
+  lastStateBubbleShownAt = Date.now()
+  say(text, duration)
+}
+
+function scheduleSameStateBubbleRefresh(delay: number) {
+  if (sameStateBubbleTimer) {
+    return
+  }
+
+  sameStateBubbleTimer = setTimeout(() => {
+    sameStateBubbleTimer = null
+
+    if (currentState.value === AGENT_STATE.IDLE) {
+      return
+    }
+
+    const text = stateBubbleText.value
+    if (text) {
+      showStateBubble(text)
+    }
+  }, delay)
 }
 
 function startIdleGreetingLoop() {
@@ -135,20 +183,30 @@ onUnmounted(() => {
   if (idleGreetingTimer) {
     clearInterval(idleGreetingTimer)
   }
+  clearSameStateBubbleTimer()
   window.removeEventListener('click', closeMenu)
   window.removeEventListener('blur', closeMenu)
   window.removeEventListener('keydown', handleWindowKeydown)
   hide()
 })
 
-watch(currentState, (state, previous) => {
-  void playState(state)
+watch(activeAgent, (agent) => {
+  if (agent) {
+    lastActiveAgent.value = agent
+  }
+})
+
+watch([currentState, stateBubbleText], ([state, text], [previousState, previousText]) => {
+  if (state !== previousState) {
+    clearSameStateBubbleTimer()
+    void playState(state)
+  }
 
   if (state === AGENT_STATE.IDLE) {
-    if (previous && previous !== AGENT_STATE.IDLE) {
-      say(
+    if (previousState && previousState !== AGENT_STATE.IDLE) {
+      showStateBubble(
         ui.value.pet.idleResume(
-          formatAgentLabel(activeAgent.value, props.bootstrap.settings.language),
+          currentAgentLabel(),
           props.bootstrap.settings.name,
         ),
         2600,
@@ -157,10 +215,23 @@ watch(currentState, (state, previous) => {
     return
   }
 
-  const text = bubbleTextForState(state)
-  if (text) {
-    say(text, 2200)
+  if (!text || (state === previousState && text === previousText)) {
+    return
   }
+
+  if (state !== previousState || isUrgentBubbleState(state)) {
+    clearSameStateBubbleTimer()
+    showStateBubble(text)
+    return
+  }
+
+  const elapsed = Date.now() - lastStateBubbleShownAt
+  if (elapsed >= SAME_STATE_BUBBLE_REFRESH_COOLDOWN_MS) {
+    showStateBubble(text)
+    return
+  }
+
+  scheduleSameStateBubbleRefresh(SAME_STATE_BUBBLE_REFRESH_COOLDOWN_MS - elapsed)
 })
 
 watch(

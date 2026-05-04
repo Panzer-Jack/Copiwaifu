@@ -383,6 +383,14 @@ function actionGroupBindingStatus(state: TAgentState) {
           <label class="choice">
             <input
               v-model="form.windowSize"
+              :value="WINDOW_SIZE_PRESET.TINY"
+              type="radio"
+            >
+            <span>{{ ui.windowSizeLabels[WINDOW_SIZE_PRESET.TINY] }}</span>
+          </label>
+          <label class="choice">
+            <input
+              v-model="form.windowSize"
               :value="WINDOW_SIZE_PRESET.SMALL"
               type="radio"
             >

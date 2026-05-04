@@ -31,6 +31,7 @@ export const SESSION_PHASE = {
 export type SessionPhase = typeof SESSION_PHASE[keyof typeof SESSION_PHASE]
 
 export const WINDOW_SIZE_PRESET = {
+  TINY: 'tiny',
   SMALL: 'small',
   MEDIUM: 'medium',
   LARGE: 'large',
