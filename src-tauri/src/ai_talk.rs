@@ -313,6 +313,7 @@ fn resolve_sidecar_script(app_handle: &AppHandle) -> Option<PathBuf> {
 
     let resource_dir = app_handle.path().resource_dir().ok()?;
     [
+        resource_dir.join("_up_/sidecar/ai-runtime/bundle/main.mjs"),
         resource_dir.join("sidecar/ai-runtime/bundle/main.mjs"),
         resource_dir.join("ai-runtime/bundle/main.mjs"),
         resource_dir.join("bundle/main.mjs"),
