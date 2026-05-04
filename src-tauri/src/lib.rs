@@ -3,6 +3,8 @@ use tauri::{ActivationPolicy, Manager};
 #[allow(deprecated)]
 use tauri_nspanel::{cocoa::appkit::NSWindowCollectionBehavior, WebviewWindowExt};
 
+use std::process::Command;
+
 mod ai_talk;
 mod navigator;
 mod shell;
@@ -35,8 +37,30 @@ fn elevate_desktop_pet_window(window: &tauri::WebviewWindow) -> tauri::Result<()
     Ok(())
 }
 
+fn fix_path_env() {
+    if std::env::var_os("PATH")
+        .map(|p| p.to_string_lossy().contains("/usr/local"))
+        .unwrap_or(false)
+    {
+        return;
+    }
+
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    if let Ok(output) = Command::new(&shell)
+        .args(["-ilc", "echo $PATH"])
+        .output()
+    {
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !path.is_empty() {
+            std::env::set_var("PATH", &path);
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    fix_path_env();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
