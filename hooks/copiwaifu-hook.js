@@ -17,7 +17,7 @@ const CLAUDE_MAP = {
   SessionStart: 'session_start', SessionEnd: 'session_end',
   UserPromptSubmit: 'thinking', PreToolUse: 'tool_use',
   PostToolUse: 'tool_result', PostToolUseFailure: 'error',
-  Stop: 'complete', Notification: 'complete', PermissionRequest: 'permission_request',
+  Stop: 'complete', Notification: 'permission_request', PermissionRequest: 'permission_request',
   Elicitation: 'tool_use', SubagentStart: 'tool_use', SubagentStop: 'tool_use',
   PreCompact: 'tool_use', PostCompact: 'tool_use', WorktreeCreate: 'tool_use',
 }
@@ -31,7 +31,7 @@ const GEMINI_MAP = {
   BeforeTool: 'tool_use', AfterTool: 'tool_result',
   BeforeAgent: 'tool_use', AfterAgent: 'tool_result',
 }
-const CODEX_MAP = { 'agent-turn-complete': 'complete', notify: 'tool_use' }
+const CODEX_MAP = { notify: 'tool_use' }
 const PASSTHROUGH = new Set(['session_start','session_end','thinking','tool_use','tool_result','error','complete','permission_request'])
 
 function normalizeEvent(ev) {
@@ -66,18 +66,31 @@ function handle(input) {
 
   const ctx = parseJson(input)
   const mappedEvent = resolveMappedEvent(ctx)
-  if (!mappedEvent) return process.exit(0)
+  if (!mappedEvent) {
+    chainHook(agent, rawEvent, rawInput)
+    return process.exit(0)
+  }
   const sessionId = ctx.session_id || ctx.sessionId || ctx['thread-id'] || `${agent}-${process.ppid}`
   const toolName = ctx.tool_name || ctx.toolName || ctx.name || agent
-  const summary = resolveSummary(ctx, agent)
+  const summary = resolveSummary(ctx, agent, mappedEvent)
   const workingDirectory = ctx.cwd || ctx.workingDirectory || ctx.working_directory
-  const sessionTitle = resolveSessionTitle(ctx)
+  const sessionTitle = resolveSessionTitle(ctx, mappedEvent)
   const needsAttention = mappedEvent === 'permission_request' || ['bash', 'execute_command'].includes(toolName.toLowerCase())
+  const turnStart = isTurnStartEvent(agent, rawEvent, mappedEvent)
+  const turnFingerprint = turnStart ? (sessionTitle || summary) : undefined
 
-  const data = { tool_name: toolName, summary, working_directory: workingDirectory, session_title: sessionTitle, needs_attention: needsAttention }
+  const data = {
+    tool_name: toolName,
+    summary,
+    working_directory: workingDirectory,
+    session_title: sessionTitle,
+    needs_attention: needsAttention,
+    turn_start: turnStart,
+    turn_fingerprint: turnFingerprint,
+  }
   const payload = { agent, session_id: sessionId, event: mappedEvent, data }
 
-  writeSession(sessionId, agent, mappedEvent, workingDirectory, sessionTitle, needsAttention, { type: mappedEvent, timestamp: Date.now(), toolName, summary })
+  writeSession(sessionId, agent, mappedEvent, workingDirectory, sessionTitle, needsAttention, { type: mappedEvent, timestamp: Date.now(), toolName, summary, turnStart, turnFingerprint })
   chainHook(agent, rawEvent, rawInput)
 
   const port = readPort()
@@ -97,6 +110,15 @@ function writeSession(sessionId, ag, ev, workDir, title, attention, lastEvent) {
       error: 'error', complete: 'completed',
     }
     const now = Date.now()
+    const eventHistory = appendEventHistory(
+      ev === 'session_start' ? [] : existing.events,
+      { ...lastEvent, timestamp: lastEvent.timestamp || now },
+      ag,
+      ev,
+    )
+    const sessionTitle = title || existing.sessionTitle
+    const lastMeaningfulSummary = bestMeaningfulSummary(eventHistory, sessionTitle)
+      || (ev === 'session_start' ? undefined : existing.lastMeaningfulSummary)
     const session = {
       sessionId,
       agent: ag,
@@ -104,15 +126,84 @@ function writeSession(sessionId, ag, ev, workDir, title, attention, lastEvent) {
       startedAt: existing.startedAt || now,
       lastUpdated: now,
       workingDirectory: workDir || existing.workingDirectory,
-      sessionTitle: title || existing.sessionTitle,
+      sessionTitle,
       needsAttention: attention,
-      lastEvent,
+      lastEvent: eventHistory[eventHistory.length - 1] || lastEvent,
+      events: eventHistory,
+      lastMeaningfulSummary,
+      aiTalkContext: ev === 'session_start' ? undefined : existing.aiTalkContext,
     }
     if (ev === 'session_end') session.endedAt = now
     const tmp = `${file}.tmp`
     fs.writeFileSync(tmp, JSON.stringify(session, null, 2))
     fs.renameSync(tmp, file)
   } catch {}
+}
+
+function appendEventHistory(existingEvents, event, ag, ev) {
+  const summary = typeof event.summary === 'string' ? truncate(event.summary.trim()) : undefined
+  const toolName = typeof event.toolName === 'string' ? event.toolName.trim() : undefined
+  const next = Array.isArray(existingEvents) ? existingEvents.slice(-19) : []
+  next.push({
+    type: ev,
+    eventType: ev,
+    timestamp: event.timestamp || Date.now(),
+    timestampMs: event.timestamp || Date.now(),
+    toolName,
+    summary,
+    turnStart: Boolean(event.turnStart),
+    turnFingerprint: event.turnFingerprint,
+    informative: isMeaningfulSummary(summary, toolName, ag, ev),
+  })
+  return next
+}
+
+function bestMeaningfulSummary(events, sessionTitle) {
+  const candidates = events
+    .filter(event => event.informative && event.summary)
+    .map(event => ({ event, priority: summaryPriority(event) }))
+    .sort((a, b) => b.priority - a.priority || (b.event.timestampMs || 0) - (a.event.timestampMs || 0))
+
+  const best = candidates[0]
+  if (best?.priority >= 4) {
+    return best.event.summary
+  }
+
+  if (sessionTitle) {
+    return sessionTitle
+  }
+
+  return best?.event.summary
+}
+
+function summaryPriority(event) {
+  if (event.type === 'complete' || event.eventType === 'complete') return 5
+  if (event.type === 'error' || event.eventType === 'error') return 5
+  if (event.type === 'thinking' || event.eventType === 'thinking') return 4
+  if (event.type === 'permission_request' || event.eventType === 'permission_request') return 3
+  if (event.type === 'tool_result' || event.eventType === 'tool_result') return 2
+  if (event.type === 'tool_use' || event.eventType === 'tool_use') return 1
+  return 0
+}
+
+function isMeaningfulSummary(summary, toolName, ag, ev) {
+  if (!summary || !summary.trim()) return false
+  const normalized = normalizeSummary(summary)
+  if (!normalized) return false
+  if (normalized === normalizeSummary(toolName || '')) return false
+  if (normalized === normalizeSummary(ag) || normalized === normalizeSummary(ev)) return false
+  if (['idle', 'working', 'complete', 'completed', 'error', 'thinking', 'tooluse', 'toolresult'].includes(normalized)) return false
+
+  const lower = summary.trim().toLowerCase()
+  if (lower.startsWith('waiting ') || lower.startsWith('waiting for ')) return false
+  if (summary.trim().startsWith('等') && summary.includes('操作')) return false
+  if (lower.startsWith('running ') || lower.startsWith('finished ')) return false
+  if (lower.endsWith(' session started') || lower.endsWith(' session closed') || lower.endsWith(' session archived') || lower.endsWith(' finished this turn')) return false
+  return true
+}
+
+function normalizeSummary(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^\p{Letter}\p{Number}]/gu, '')
 }
 
 function chainHook(ag, ev, input) {
@@ -137,34 +228,101 @@ function resolveMappedEvent(ctx) {
   return normalizeEvent(rawEvent)
 }
 
-function resolveSessionTitle(ctx) {
+function isTurnStartEvent(ag, ev, mappedEvent) {
+  if (mappedEvent !== 'thinking') return false
+  if (ag === 'claude-code') return ev === 'UserPromptSubmit' || ev === 'thinking'
+  if (ag === 'copilot') return ev === 'userPromptSubmitted' || ev === 'thinking'
+  return ev === 'thinking'
+}
+
+function resolveSessionTitle(ctx, mappedEvent) {
+  const limit = 180
   const msgs = ctx['input-messages']
   if (Array.isArray(msgs)) {
     const first = msgs.find(m => m.role === 'user')
     const content = first?.content
-    if (typeof content === 'string') return truncate(content)
+    if (typeof content === 'string') return truncate(content, limit)
     if (Array.isArray(content)) {
       const text = content.find(c => c.type === 'text')?.text
-      if (text) return truncate(text)
+      if (text) return truncate(text, limit)
     }
   }
-  return ctx.sessionTitle ? truncate(ctx.sessionTitle) : undefined
+  if (mappedEvent === 'thinking') {
+    const prompt = pickText(ctx.prompt, ctx.message, ctx.userPrompt, ctx.user_prompt)
+    if (prompt) return truncate(firstNonEmptyLine(prompt), limit)
+  }
+  return ctx.sessionTitle ? truncate(ctx.sessionTitle, limit) : undefined
 }
 
-function resolveSummary(ctx, ag) {
-  const explicit = ctx.summary || ctx.description || ctx['last-assistant-message']
-  if (explicit) return truncate(explicit)
+function resolveSummary(ctx, ag, mappedEvent) {
+  const limit = TRUNCATE_LIMITS[mappedEvent] || TRUNCATE_DEFAULT
+  const agentSummary = ag === 'claude-code' ? resolveClaudeSummary(ctx, mappedEvent) : undefined
+  if (agentSummary) return truncate(agentSummary, limit)
+
+  const explicit = pickText(
+    ctx.summary,
+    ctx.description,
+    ctx['last-assistant-message'],
+    ctx.prompt,
+    ctx.message,
+  )
+  if (explicit) return truncate(explicit, limit)
   const input = ctx.tool_input || ctx.toolInput || ctx.input
-  if (typeof input === 'string') return truncate(input)
+  if (typeof input === 'string') return truncate(input, limit)
   if (input && typeof input === 'object') {
     const preferred = input.command || input.file_path || input.path || input.prompt || input.query
-    if (typeof preferred === 'string') return truncate(preferred)
-    return truncate(JSON.stringify(input))
+    if (typeof preferred === 'string') return truncate(preferred, limit)
+    return truncate(JSON.stringify(input), limit)
   }
   return `等待 ${ag} 操作`
 }
 
-function truncate(v) { return v.length > 180 ? `${v.slice(0, 180)}...` : v }
+function resolveClaudeSummary(ctx, mappedEvent) {
+  if (mappedEvent === 'thinking') {
+    return pickText(ctx.prompt, ctx.message, ctx.userPrompt, ctx.user_prompt)
+  }
+
+  if (mappedEvent === 'complete') {
+    return pickText(
+      ctx.summary,
+      ctx.description,
+      ctx.last_assistant_message,
+      ctx['last-assistant-message'],
+      ctx.message,
+      ctx.result,
+    )
+  }
+
+  if (mappedEvent === 'error') {
+    return pickText(ctx.error, ctx.message, ctx.summary, ctx.description)
+  }
+
+  if (mappedEvent === 'permission_request') {
+    return pickText(ctx.message, ctx.prompt, ctx.reason)
+  }
+
+  return undefined
+}
+
+function pickText(...values) {
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    const text = value.trim()
+    if (text) return text
+  }
+  return undefined
+}
+
+function firstNonEmptyLine(value) {
+  return value.split(/\r?\n/).map(line => line.trim()).find(Boolean) || value.trim()
+}
+
+const TRUNCATE_LIMITS = { complete: 512, error: 512, thinking: 180 }
+const TRUNCATE_DEFAULT = 120
+function truncate(v, limit) {
+  const max = limit || TRUNCATE_DEFAULT
+  return v.length > max ? `${v.slice(0, max)}...` : v
+}
 function parseJson(s) { try { return JSON.parse(s) } catch { return {} } }
 function tryRead(f) { try { return fs.readFileSync(f, 'utf8') } catch { return '{}' } }
 

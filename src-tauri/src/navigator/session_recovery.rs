@@ -99,7 +99,7 @@ fn recover_session(state: &mut NavigatorState, path: &PathBuf) {
 
     let last_event = &json["lastEvent"];
     let tool_name = last_event["toolName"].as_str().map(str::to_string);
-    let summary = last_event["summary"].as_str().map(str::to_string);
+    let summary = recover_summary(&json);
 
     let event = AgentEvent {
         agent,
@@ -111,10 +111,32 @@ fn recover_session(state: &mut NavigatorState, path: &PathBuf) {
             working_directory: json["workingDirectory"].as_str().map(str::to_string),
             session_title: json["sessionTitle"].as_str().map(str::to_string),
             needs_attention: json["needsAttention"].as_bool(),
+            turn_start: false,
+            turn_fingerprint: None,
         },
     };
 
     state.apply_event(event);
+}
+
+fn recover_summary(json: &serde_json::Value) -> Option<String> {
+    json["aiTalkContext"]["lastMeaningfulSummary"]
+        .as_str()
+        .or_else(|| json["lastMeaningfulSummary"].as_str())
+        .map(str::to_string)
+        .or_else(|| recover_summary_from_events(json))
+        .or_else(|| json["lastEvent"]["summary"].as_str().map(str::to_string))
+}
+
+fn recover_summary_from_events(json: &serde_json::Value) -> Option<String> {
+    let events = json["events"].as_array()?;
+    events.iter().rev().find_map(|event| {
+        if !event["informative"].as_bool().unwrap_or(false) {
+            return None;
+        }
+
+        event["summary"].as_str().map(str::to_string)
+    })
 }
 
 fn home_sessions_dir() -> Option<PathBuf> {

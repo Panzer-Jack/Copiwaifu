@@ -29,6 +29,7 @@ const CUSTOM_MODELS_DIR_NAME: &str = "custom-models";
 const CURRENT_CUSTOM_MODEL_DIR_NAME: &str = "current";
 const STAGED_CUSTOM_MODEL_DIR_NAME: &str = "current.staging";
 const BACKUP_CUSTOM_MODEL_DIR_NAME: &str = "current.backup";
+const DEFAULT_AI_TALK_PROVIDER: &str = "openai";
 const MENU_OPEN_SETTINGS: &str = "open-settings";
 const MENU_TOGGLE_VISIBILITY: &str = "toggle-visibility";
 const MENU_EXIT: &str = "exit-app";
@@ -71,6 +72,52 @@ pub struct MotionGroupOption {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct AiTalkProviderProfile {
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default)]
+    pub model_id: String,
+    #[serde(default)]
+    pub base_url: Option<String>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiTalkSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub provider: String,
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default)]
+    pub model_id: String,
+    #[serde(default)]
+    pub base_url: Option<String>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default)]
+    pub provider_profiles: BTreeMap<String, AiTalkProviderProfile>,
+}
+
+impl Default for AiTalkSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            provider: DEFAULT_AI_TALK_PROVIDER.to_string(),
+            api_key: String::new(),
+            model_id: String::new(),
+            base_url: None,
+            headers: BTreeMap::new(),
+            provider_profiles: BTreeMap::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub name: String,
     pub language: AppLanguage,
@@ -78,6 +125,7 @@ pub struct AppSettings {
     pub model_directory: Option<String>,
     pub window_size: WindowSizePreset,
     pub action_group_bindings: BTreeMap<String, Option<String>>,
+    pub ai_talk: AiTalkSettings,
 }
 
 impl Default for AppSettings {
@@ -89,6 +137,7 @@ impl Default for AppSettings {
             model_directory: None,
             window_size: WindowSizePreset::Medium,
             action_group_bindings: default_action_group_bindings(),
+            ai_talk: AiTalkSettings::default(),
         }
     }
 }
@@ -127,7 +176,7 @@ pub struct WindowVisibilityPayload {
 
 #[derive(Clone, Debug)]
 pub struct ShellState {
-    settings: AppSettings,
+    pub(crate) settings: AppSettings,
     model_scan: ModelScanResult,
     main_window_visible: bool,
 }
@@ -143,6 +192,7 @@ struct PersistedAppSettings {
     model_directory: Option<String>,
     window_size: Option<WindowSizePreset>,
     action_group_bindings: Option<BTreeMap<String, Option<String>>>,
+    ai_talk: Option<AiTalkSettings>,
     #[serde(rename = "actionBindings")]
     legacy_action_bindings: Option<BTreeMap<String, Option<String>>>,
 }
@@ -413,6 +463,9 @@ fn merge_persisted_settings(persisted: PersistedAppSettings) -> AppSettings {
     {
         settings.action_group_bindings = merge_action_group_bindings(action_group_bindings);
     }
+    if let Some(ai_talk) = persisted.ai_talk {
+        settings.ai_talk = sanitize_ai_talk_settings(ai_talk);
+    }
 
     settings
 }
@@ -424,6 +477,7 @@ fn normalize_loaded_settings(settings: &mut AppSettings) {
     }
     settings.action_group_bindings =
         merge_action_group_bindings(settings.action_group_bindings.clone());
+    settings.ai_talk = sanitize_ai_talk_settings(settings.ai_talk.clone());
 }
 
 fn normalize_user_settings(settings: &mut AppSettings) -> Result<(), String> {
@@ -436,7 +490,70 @@ fn normalize_user_settings(settings: &mut AppSettings) -> Result<(), String> {
     }
     settings.action_group_bindings =
         merge_action_group_bindings(settings.action_group_bindings.clone());
+    settings.ai_talk = sanitize_ai_talk_settings(settings.ai_talk.clone());
     Ok(())
+}
+
+fn sanitize_ai_talk_settings(mut settings: AiTalkSettings) -> AiTalkSettings {
+    settings.provider = settings.provider.trim().to_string();
+    if settings.provider.is_empty() {
+        settings.provider = DEFAULT_AI_TALK_PROVIDER.to_string();
+    }
+
+    settings.api_key = settings.api_key.trim().to_string();
+    settings.model_id = settings.model_id.trim().to_string();
+    settings.base_url = settings
+        .base_url
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    settings.headers = settings
+        .headers
+        .into_iter()
+        .filter_map(|(key, value)| {
+            let key = key.trim().to_string();
+            let value = value.trim().to_string();
+            (!key.is_empty() && !value.is_empty()).then_some((key, value))
+        })
+        .collect();
+    settings.provider_profiles = settings
+        .provider_profiles
+        .into_iter()
+        .filter_map(|(provider, profile)| {
+            let provider = provider.trim().to_string();
+            (!provider.is_empty()).then_some((provider, sanitize_ai_talk_provider_profile(profile)))
+        })
+        .collect();
+    settings.provider_profiles.insert(
+        settings.provider.clone(),
+        AiTalkProviderProfile {
+            api_key: settings.api_key.clone(),
+            model_id: settings.model_id.clone(),
+            base_url: settings.base_url.clone(),
+            headers: settings.headers.clone(),
+        },
+    );
+
+    settings
+}
+
+fn sanitize_ai_talk_provider_profile(mut profile: AiTalkProviderProfile) -> AiTalkProviderProfile {
+    profile.api_key = profile.api_key.trim().to_string();
+    profile.model_id = profile.model_id.trim().to_string();
+    profile.base_url = profile
+        .base_url
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    profile.headers = profile
+        .headers
+        .into_iter()
+        .filter_map(|(key, value)| {
+            let key = key.trim().to_string();
+            let value = value.trim().to_string();
+            (!key.is_empty() && !value.is_empty()).then_some((key, value))
+        })
+        .collect();
+
+    profile
 }
 
 fn persist_settings(app_handle: &AppHandle, settings: &AppSettings) -> Result<(), String> {

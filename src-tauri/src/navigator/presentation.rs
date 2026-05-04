@@ -24,6 +24,7 @@ pub fn derive_focus_snapshot(
             session_title: top.session_title.clone(),
             needs_attention: top.needs_attention,
             server_port,
+            ai_talk_context: top.ai_talk_context.clone(),
         }
     } else {
         StateChangePayload {
@@ -36,6 +37,7 @@ pub fn derive_focus_snapshot(
             session_title: None,
             needs_attention: None,
             server_port,
+            ai_talk_context: None,
         }
     }
 }
@@ -69,6 +71,7 @@ fn into_payload(session: &SessionSnapshot) -> NavigatorSessionPayload {
         working_directory: session.working_directory.clone(),
         session_title: session.session_title.clone(),
         needs_attention: session.needs_attention,
+        ai_talk_context: session.ai_talk_context.clone(),
     }
 }
 

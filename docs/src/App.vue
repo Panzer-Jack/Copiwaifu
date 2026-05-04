@@ -56,7 +56,7 @@ const Sprite = import.meta.env.SSR
             >
               easy-live2d
             </a>,
-            turning thinking, tool use, completion, and attention states into a calm Live2D presence that stays on the desktop without becoming visual noise.
+            turning thinking, tool use, completion, attention requests, and optional AI Talk summaries into a calm Live2D presence that stays on the desktop without becoming visual noise.
           </p>
 
           <div class="hero-card__actions">

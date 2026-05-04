@@ -7,7 +7,7 @@ import matter from 'gray-matter'
 // @ts-expect-error missing types
 import MarkdownIt from 'markdown-it'
 
-const DOMAIN = 'https://blog.panzer-jack.cn'
+const DOMAIN = 'https://copiwaifu.panzer-jack.cn'
 const AUTHOR = {
   name: 'Panzer-Jack',
   email: 'panzer_jack@panzer-jack.cn',
@@ -21,15 +21,15 @@ const markdown = MarkdownIt({
 })
 
 async function run() {
-  await buildBlogRSS()
+  await buildWebsiteRSS()
 }
 
-async function buildBlogRSS() {
+async function buildWebsiteRSS() {
   const files = await fg('pages/posts/*.md')
 
   const options = {
-    title: '老船长PZ_Jack の 博客',
-    description: 'Panzer-Jack\'s Blog',
+    title: 'Copiwaifu',
+    description: 'Live2D AI desktop companion for coding sessions',
     id: `${DOMAIN}/`,
     link: `${DOMAIN}/`,
     copyright: `CC BY-NC-SA 4.0 2026 © Panzer-Jack`,

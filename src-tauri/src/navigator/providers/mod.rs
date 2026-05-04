@@ -34,17 +34,16 @@ fn normalize_shared(raw_event: &str) -> Option<EventType> {
         "session_start" | "SessionStart" | "sessionStart" => Some(EventType::SessionStart),
         "session_end" | "SessionEnd" | "sessionEnd" => Some(EventType::SessionEnd),
         "thinking" | "UserPromptSubmit" | "userPromptSubmitted" => Some(EventType::Thinking),
-        "tool_use" | "PreToolUse" | "preToolUse" | "BeforeTool" | "BeforeAgent"
-        | "before_tool" | "subagent_started" => Some(EventType::ToolUse),
+        "tool_use" | "PreToolUse" | "preToolUse" | "BeforeTool" | "BeforeAgent" | "before_tool"
+        | "subagent_started" => Some(EventType::ToolUse),
         "tool_result" | "PostToolUse" | "postToolUse" | "AfterTool" | "AfterAgent"
         | "tool_finished" | "subagent_stopped" => Some(EventType::ToolResult),
         "error" | "PostToolUseFailure" | "StopFailure" | "errorOccurred" | "tool_error" => {
             Some(EventType::Error)
         }
-        "complete" | "Stop" | "agentStop" | "Notification" | "notification"
-        | "turn_completed" => Some(EventType::Complete),
-        "permission_request" | "PermissionRequest" | "needs_attention"
-        | "question_requested" => Some(EventType::NeedsAttention),
+        "complete" | "Stop" | "agentStop" | "turn_completed" => Some(EventType::Complete),
+        "permission_request" | "PermissionRequest" | "needs_attention" | "question_requested"
+        | "Notification" | "notification" => Some(EventType::NeedsAttention),
         _ => None,
     }
 }

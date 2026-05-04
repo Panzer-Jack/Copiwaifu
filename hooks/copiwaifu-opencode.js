@@ -88,6 +88,20 @@ function writeSession(sessionId, event, data) {
       error: 'error',
       complete: 'completed',
     }
+    const events = appendEventHistory(
+      event === 'session_start' ? [] : existing.events,
+      {
+        type: event,
+        timestamp: now,
+        toolName: data.tool_name,
+        summary: data.summary,
+        turnStart: data.turn_start,
+        turnFingerprint: data.turn_fingerprint,
+      },
+    )
+    const sessionTitle = data.session_title || existing.sessionTitle
+    const lastMeaningfulSummary = bestMeaningfulSummary(events, sessionTitle)
+      || (event === 'session_start' ? undefined : existing.lastMeaningfulSummary)
     const session = {
       sessionId,
       agent: 'opencode',
@@ -95,14 +109,12 @@ function writeSession(sessionId, event, data) {
       startedAt: existing.startedAt || now,
       lastUpdated: now,
       workingDirectory: data.working_directory || existing.workingDirectory,
-      sessionTitle: data.session_title || existing.sessionTitle,
+      sessionTitle,
       needsAttention: data.needs_attention ?? existing.needsAttention ?? false,
-      lastEvent: {
-        type: event,
-        timestamp: now,
-        toolName: data.tool_name,
-        summary: data.summary,
-      },
+      lastEvent: events[events.length - 1],
+      events,
+      lastMeaningfulSummary,
+      aiTalkContext: event === 'session_start' ? undefined : existing.aiTalkContext,
     }
     if (event === 'session_end') {
       session.endedAt = now
@@ -112,6 +124,89 @@ function writeSession(sessionId, event, data) {
     fs.renameSync(tmp, file)
   }
   catch {}
+}
+
+function appendEventHistory(existingEvents, event) {
+  const summary = truncate(event.summary)
+  const toolName = truncate(event.toolName)
+  const next = Array.isArray(existingEvents) ? existingEvents.slice(-19) : []
+  next.push({
+    type: event.type,
+    eventType: event.type,
+    timestamp: event.timestamp || Date.now(),
+    timestampMs: event.timestamp || Date.now(),
+    toolName,
+    summary,
+    turnStart: Boolean(event.turnStart),
+    turnFingerprint: event.turnFingerprint,
+    informative: isMeaningfulSummary(summary, toolName, event.type),
+  })
+  return next
+}
+
+function bestMeaningfulSummary(events, sessionTitle) {
+  const candidates = events
+    .filter(item => item.informative && item.summary)
+    .map(item => ({ item, priority: summaryPriority(item) }))
+    .sort((a, b) => b.priority - a.priority || (b.item.timestampMs || 0) - (a.item.timestampMs || 0))
+  const best = candidates[0]
+  if (best?.priority >= 4) {
+    return best.item.summary
+  }
+  if (sessionTitle) {
+    return sessionTitle
+  }
+  return best?.item.summary
+}
+
+function summaryPriority(event) {
+  if (event.type === 'complete' || event.eventType === 'complete') return 5
+  if (event.type === 'error' || event.eventType === 'error') return 5
+  if (event.type === 'thinking' || event.eventType === 'thinking') return 4
+  if (event.type === 'permission_request' || event.eventType === 'permission_request') return 3
+  if (event.type === 'tool_result' || event.eventType === 'tool_result') return 2
+  if (event.type === 'tool_use' || event.eventType === 'tool_use') return 1
+  return 0
+}
+
+function isMeaningfulSummary(summary, toolName, event) {
+  if (!summary || !summary.trim()) {
+    return false
+  }
+
+  const normalized = normalizeSummary(summary)
+  if (!normalized) {
+    return false
+  }
+  if (normalized === normalizeSummary(toolName || '')) {
+    return false
+  }
+  if (normalized === 'opencode' || normalized === normalizeSummary(event)) {
+    return false
+  }
+  if (['idle', 'working', 'complete', 'completed', 'error', 'thinking', 'tooluse', 'toolresult'].includes(normalized)) {
+    return false
+  }
+
+  const lower = summary.trim().toLowerCase()
+  if (lower.startsWith('waiting ') || lower.startsWith('waiting for ')) {
+    return false
+  }
+  if (summary.trim().startsWith('等') && summary.includes('操作')) {
+    return false
+  }
+  if (lower.startsWith('running ') || lower.startsWith('finished ')) {
+    return false
+  }
+  if (lower.endsWith(' session started') || lower.endsWith(' session closed') || lower.endsWith(' session archived') || lower.endsWith(' finished this turn')) {
+    return false
+  }
+
+  return true
+}
+
+function normalizeSummary(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^\p{Letter}\p{Number}]/gu, '')
 }
 
 function buildPayload(agent, sessionId, event, data) {
@@ -242,6 +337,8 @@ export default {
               summary: text,
               tool_name: 'OpenCode',
               needs_attention: false,
+              turn_start: true,
+              turn_fingerprint: text,
             })
             return
           }

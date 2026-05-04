@@ -33,6 +33,8 @@ struct ObservedSession {
     summary: Option<String>,
     working_directory: Option<String>,
     session_title: Option<String>,
+    turn_start: bool,
+    turn_fingerprint: Option<String>,
 }
 
 impl ObservedSession {
@@ -51,6 +53,8 @@ impl ObservedSession {
                 working_directory: self.working_directory,
                 session_title: self.session_title,
                 needs_attention: Some(false),
+                turn_start: self.turn_start,
+                turn_fingerprint: self.turn_fingerprint,
             },
         }
     }
@@ -128,6 +132,8 @@ fn finalize_disappeared(snapshot: &ObservedSession) -> Option<ObservedSession> {
             .or_else(|| snapshot.session_title.clone()),
         working_directory: snapshot.working_directory.clone(),
         session_title: snapshot.session_title.clone(),
+        turn_start: false,
+        turn_fingerprint: None,
     })
 }
 
@@ -201,10 +207,9 @@ fn scan_recent_gemini_sessions() -> Result<Vec<ObservedSession>, String> {
             continue;
         }
 
-        let Some((path, modified_at)) = find_most_recent_matching_file(
-            &chats_dir,
-            |file_name| file_name.starts_with("session-") && file_name.ends_with(".json"),
-        )?
+        let Some((path, modified_at)) = find_most_recent_matching_file(&chats_dir, |file_name| {
+            file_name.starts_with("session-") && file_name.ends_with(".json")
+        })?
         else {
             continue;
         };
@@ -270,11 +275,9 @@ fn scan_recent_opencode_sessions() -> Result<Vec<ObservedSession>, String> {
             continue;
         }
 
-        if let Some(snapshot) = parse_opencode_session(
-            &conn,
-            &session_id,
-            (!cwd.trim().is_empty()).then_some(cwd),
-        )? {
+        if let Some(snapshot) =
+            parse_opencode_session(&conn, &session_id, (!cwd.trim().is_empty()).then_some(cwd))?
+        {
             results.push(snapshot);
         }
     }
@@ -324,7 +327,9 @@ fn parse_codex_rollout(path: &Path) -> Option<ObservedSession> {
         tool_name: Some("codex".to_string()),
         summary,
         working_directory: state.working_directory,
-        session_title: state.session_title,
+        session_title: state.session_title.clone(),
+        turn_start: state.current_turn_active,
+        turn_fingerprint: state.session_title,
     })
 }
 
@@ -389,7 +394,10 @@ fn parse_gemini_session(path: &Path, cwd: Option<String>) -> Option<ObservedSess
         }
     }
 
-    let session_title = last_user.as_deref().and_then(first_non_empty_line).map(truncate);
+    let session_title = last_user
+        .as_deref()
+        .and_then(first_non_empty_line)
+        .map(truncate);
     let summary = session_title
         .clone()
         .or_else(|| last_assistant.as_ref().map(truncate))
@@ -402,7 +410,9 @@ fn parse_gemini_session(path: &Path, cwd: Option<String>) -> Option<ObservedSess
         tool_name: Some("gemini".to_string()),
         summary,
         working_directory: cwd,
-        session_title,
+        session_title: session_title.clone(),
+        turn_start: session_title.is_some(),
+        turn_fingerprint: session_title,
     })
 }
 
@@ -445,7 +455,11 @@ fn parse_opencode_session(
         if json["type"].as_str() != Some("text") {
             continue;
         }
-        let Some(text) = json["text"].as_str().map(str::trim).filter(|value| !value.is_empty()) else {
+        let Some(text) = json["text"]
+            .as_str()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        else {
             continue;
         };
         match role.as_str() {
@@ -476,6 +490,8 @@ fn parse_opencode_session(
         summary,
         working_directory: cwd,
         session_title,
+        turn_start: false,
+        turn_fingerprint: None,
     }))
 }
 
@@ -605,8 +621,8 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        apply_codex_rollout_line, extract_message_text, extract_session_title, first_non_empty_line,
-        CodexRolloutState, EventType,
+        apply_codex_rollout_line, extract_message_text, extract_session_title,
+        first_non_empty_line, CodexRolloutState, EventType,
     };
 
     #[test]
