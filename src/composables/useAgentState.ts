@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { AGENT_STATE } from '../types/agent'
-import type { AgentType, NavigatorStatus, StateChangeEvent, TAgentState } from '../types/agent'
+import type { AgentType, AiTalkContext, NavigatorStatus, StateChangeEvent, TAgentState } from '../types/agent'
 
 export function useAgentState() {
   const currentState = ref<TAgentState>(AGENT_STATE.IDLE)
@@ -15,6 +15,7 @@ export function useAgentState() {
     workingDirectory: string | null
     sessionTitle: string | null
     needsAttention: boolean
+    aiTalkContext: AiTalkContext | null
   }>({
     sessionId: null,
     toolName: null,
@@ -22,6 +23,7 @@ export function useAgentState() {
     workingDirectory: null,
     sessionTitle: null,
     needsAttention: false,
+    aiTalkContext: null,
   })
 
   let unlisten: UnlistenFn | null = null
@@ -37,6 +39,7 @@ export function useAgentState() {
       workingDirectory: payload.working_directory ?? null,
       sessionTitle: payload.session_title ?? null,
       needsAttention: payload.needs_attention ?? false,
+      aiTalkContext: payload.ai_talk_context ?? null,
     }
   }
 

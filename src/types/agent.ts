@@ -59,6 +59,23 @@ export interface ResolvedActionGroupBinding {
   group: string | null
 }
 
+export interface AiTalkProviderProfile {
+  apiKey: string
+  modelId: string
+  baseUrl: string | null
+  headers: Record<string, string>
+}
+
+export interface AiTalkSettings {
+  enabled: boolean
+  provider: string
+  apiKey: string
+  modelId: string
+  baseUrl: string | null
+  headers: Record<string, string>
+  providerProfiles: Record<string, AiTalkProviderProfile>
+}
+
 export interface AppSettings {
   name: string
   language: AppLanguage
@@ -66,6 +83,7 @@ export interface AppSettings {
   modelDirectory: string | null
   windowSize: WindowSizePreset
   actionGroupBindings: Record<TAgentState, string | null>
+  aiTalk: AiTalkSettings
 }
 
 export interface ModelScanResult {
@@ -195,6 +213,7 @@ export interface StateChangeEvent {
   session_title?: string
   needs_attention?: boolean
   server_port?: number
+  ai_talk_context?: AiTalkContext
 }
 
 export interface NavigatorStatus {
@@ -212,9 +231,47 @@ export interface NavigatorSessionInfo {
   working_directory?: string
   session_title?: string
   needs_attention?: boolean
+  ai_talk_context?: AiTalkContext
 }
 
 export interface NavigatorSessionsPayload {
   sessions: NavigatorSessionInfo[]
   server_port?: number
+}
+
+export interface AiTalkEventDigest {
+  eventType: string
+  timestampMs: number
+  toolName?: string
+  summary?: string
+  informative: boolean
+}
+
+export interface AiTalkContext {
+  agent: AgentType
+  sessionId: string
+  state: TAgentState
+  phase: SessionPhase
+  turnIndex: number
+  updatedAtMs: number
+  workingDirectory?: string
+  sessionTitle?: string
+  toolName?: string
+  recentEventType?: string
+  recentSummary?: string
+  lastMeaningfulSummary?: string
+  hasContext: boolean
+  missingFields: string[]
+}
+
+export function createDefaultAiTalkSettings(): AiTalkSettings {
+  return {
+    enabled: false,
+    provider: 'openai',
+    apiKey: '',
+    modelId: '',
+    baseUrl: null,
+    headers: {},
+    providerProfiles: {},
+  }
 }

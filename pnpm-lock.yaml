@@ -8,6 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^2.0.79
+        version: 2.0.79(zod@4.4.3)
+      '@ai-sdk/google':
+        specifier: ^2.0.72
+        version: 2.0.72(zod@4.4.3)
+      '@ai-sdk/openai':
+        specifier: ^2.0.106
+        version: 2.0.106(zod@4.4.3)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.39
+        version: 1.0.39(zod@4.4.3)
       '@panzerjack/eslint-config':
         specifier: ^3.0.0
         version: 3.0.0(@typescript-eslint/rule-tester@8.58.0(eslint@10.2.0(jiti@2.6.1))(typescript@5.6.3))(@typescript-eslint/typescript-estree@8.58.0(typescript@5.6.3))(@typescript-eslint/utils@8.58.0(eslint@10.2.0(jiti@2.6.1))(typescript@5.6.3))(@vue/compiler-sfc@3.5.32)(eslint-plugin-format@2.0.1(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(typescript@5.6.3)
@@ -26,6 +38,9 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ~2.10.1
         version: 2.10.1
+      ai:
+        specifier: ^5.0.183
+        version: 5.0.183(zod@4.4.3)
       easy-live2d:
         specifier: ^0.4.3
         version: 0.4.3(eslint@10.2.0(jiti@2.6.1))(pixi.js@8.17.1)
@@ -45,6 +60,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^5.2.1
         version: 5.2.4(vite@6.4.1(jiti@2.6.1)(yaml@2.8.3))(vue@3.5.32(typescript@5.6.3))
+      esbuild:
+        specifier: ^0.25.12
+        version: 0.25.12
       release-it:
         specifier: ^19.0.3
         version: 19.2.4
@@ -59,6 +77,46 @@ importers:
         version: 2.2.12(typescript@5.6.3)
 
 packages:
+
+  '@ai-sdk/anthropic@2.0.79':
+    resolution: {integrity: sha512-K0U09FPDO1kmLPjRLXFcNSvmnKHJBMARCb8r3Ulw7wU6/+Zh9djWcFDiPPNsklg6yAezcdLTcYPszgWJJ6iOTA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/gateway@2.0.86':
+    resolution: {integrity: sha512-pP9F5G7C5sqZtAwquFB+g50lVS/s4Wf/ll2WSm0ODk0Iix27trVgBDpFK5CBletcQXSDlAvSQQi25nBodYLt3g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/google@2.0.72':
+    resolution: {integrity: sha512-BjDY6l+rV4CmHKjZe4H0uRXW3M2o+g7PaYM8oFpW+9PP1qKNEybnJ6//Si7BSf6DT+86dKARrtEl09lxSSaMaA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai-compatible@1.0.39':
+    resolution: {integrity: sha512-001hdQPPXxYBWrz5d+eAmBVYmwzsB+guIey1DFXi1ZEE5H3j7fRrhPpX55MdM9Fle2DS7WZ8b3qkumCIWE92YQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai@2.0.106':
+    resolution: {integrity: sha512-EFC0rpo1wfe4HIz5KZCE72edP2J7fOeR7wPXzjCDljaTRB1wectKDIKRLowpU4F0mbcJ+XScAsoYNPK/Z20aVQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@3.0.25':
+    resolution: {integrity: sha512-CvsRu+32Y8a167s+lrIBtsybvgTHp8j9y+6BeTvLeoW3Q+okw/b4CnNUFOLIXsRaKHQKAH+IHNJPYWywfpw0LA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider@2.0.3':
+    resolution: {integrity: sha512-h88OPkavHTiN9tMn2l5awAznGB0lXzjcLhgR1/rvjB2zlLprsNxbM2tt6OJsHUxduLC3klq0/eqaSf6fX5XVww==}
+    engines: {node: '>=18'}
 
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
@@ -532,6 +590,10 @@ packages:
   '@octokit/types@16.0.0':
     resolution: {integrity: sha512-sKq+9r1Mm4efXW1FCk7hFSeJo4QKreL/tTbR0rz/qx/r1Oa2VV83LTA/H/MuCOX7uCIJmQVRKBcbmWoySjAnSg==}
 
+  '@opentelemetry/api@1.9.0':
+    resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
+    engines: {node: '>=8.0.0'}
+
   '@oxfmt/binding-android-arm-eabi@0.35.0':
     resolution: {integrity: sha512-BaRKlM3DyG81y/xWTsE6gZiv89F/3pHe2BqX2H4JbiB8HNVlWWtplzgATAE5IDSdwChdeuWLDTQzJ92Lglw3ZA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -836,6 +898,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@standard-schema/spec@1.1.0':
+    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
   '@stylistic/eslint-plugin@5.10.0':
     resolution: {integrity: sha512-nPK52ZHvot8Ju/0A4ucSX1dcPV2/1clx0kLcH5wDmrE4naKso7TUC/voUyU1O9OTKTrR6MYip6LP0ogEMQ9jPQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -1024,6 +1089,10 @@ packages:
     resolution: {integrity: sha512-XJ9UD9+bbDo4a4epraTwG3TsNPeiB9aShrUneAVXy8q4LuwowN+qu89/6ByLMINqvIMeI9H9hOHQtg/ijrYXzQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@vercel/oidc@3.1.0':
+    resolution: {integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==}
+    engines: {node: '>= 20'}
+
   '@vitejs/plugin-vue@5.2.4':
     resolution: {integrity: sha512-7Yx/SXSOcQq5HiiV3orevHUFn+pmMB4cgbEkDYgnkUWb0WfeQ/wa2yFv6D5ICiCQOVpjA7vYDXrC7AGO8yjDHA==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -1116,6 +1185,12 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
+
+  ai@5.0.183:
+    resolution: {integrity: sha512-lmLFkxJ2epeUXi6QXi/9VYs1HF61vikpP8vGnGd3Erdh/syUyfZ/DC1to2AoNwytBNpICN3OGbTpwc7jfPewgg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
 
   ajv@6.14.0:
     resolution: {integrity: sha512-IWrosm/yrn43eiKqkfkHis7QioDleaXQHdDVPKg0FSwwd/DuvyX79TZnFOnYpB7dcsFAMmtFztZuXPDvSePkFw==}
@@ -1637,6 +1712,10 @@ packages:
   eventemitter3@5.0.4:
     resolution: {integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==}
 
+  eventsource-parser@3.0.8:
+    resolution: {integrity: sha512-70QWGkr4snxr0OXLRWsFLeRBIRPuQOvt4s8QYjmUlmlkyTZkRqS7EDVRZtzU3TiyDbXSzaOeF0XUKy8PchzukQ==}
+    engines: {node: '>=18.0.0'}
+
   execa@8.0.1:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
     engines: {node: '>=16.17'}
@@ -1889,6 +1968,9 @@ packages:
 
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
+
+  json-schema@0.4.0:
+    resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
@@ -2672,10 +2754,55 @@ packages:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@ai-sdk/anthropic@2.0.79(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/gateway@2.0.86(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
+      '@vercel/oidc': 3.1.0
+      zod: 4.4.3
+
+  '@ai-sdk/google@2.0.72(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/openai-compatible@1.0.39(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/openai@2.0.106(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/provider-utils@3.0.25(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.4.3
+
+  '@ai-sdk/provider@2.0.3':
+    dependencies:
+      json-schema: 0.4.0
 
   '@antfu/install-pkg@1.1.0':
     dependencies:
@@ -3057,6 +3184,8 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 27.0.0
 
+  '@opentelemetry/api@1.9.0': {}
+
   '@oxfmt/binding-android-arm-eabi@0.35.0':
     optional: true
 
@@ -3249,6 +3378,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.60.1':
     optional: true
+
+  '@standard-schema/spec@1.1.0': {}
 
   '@stylistic/eslint-plugin@5.10.0(eslint@10.2.0(jiti@2.6.1))':
     dependencies:
@@ -3456,6 +3587,8 @@ snapshots:
       '@typescript-eslint/types': 8.58.0
       eslint-visitor-keys: 5.0.1
 
+  '@vercel/oidc@3.1.0': {}
+
   '@vitejs/plugin-vue@5.2.4(vite@6.4.1(jiti@2.6.1)(yaml@2.8.3))(vue@3.5.32(typescript@5.6.3))':
     dependencies:
       vite: 6.4.1(jiti@2.6.1)(yaml@2.8.3)
@@ -3567,6 +3700,14 @@ snapshots:
   acorn@8.16.0: {}
 
   agent-base@7.1.4: {}
+
+  ai@5.0.183(zod@4.4.3):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.86(zod@4.4.3)
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
+      '@opentelemetry/api': 1.9.0
+      zod: 4.4.3
 
   ajv@6.14.0:
     dependencies:
@@ -4135,6 +4276,8 @@ snapshots:
 
   eventemitter3@5.0.4: {}
 
+  eventsource-parser@3.0.8: {}
+
   execa@8.0.1:
     dependencies:
       cross-spawn: 7.0.6
@@ -4347,6 +4490,8 @@ snapshots:
   json-buffer@3.0.1: {}
 
   json-schema-traverse@0.4.1: {}
+
+  json-schema@0.4.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
@@ -5331,5 +5476,7 @@ snapshots:
   yoctocolors-cjs@2.1.3: {}
 
   yoctocolors@2.1.2: {}
+
+  zod@4.4.3: {}
 
   zwitch@2.0.4: {}

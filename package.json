@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vue-tsc --noEmit && vite build && pnpm run sidecar:build",
     "preview": "vite preview",
     "tauri": "tauri",
     "run": "pnpm tauri dev",
+    "sidecar:build": "esbuild sidecar/ai-runtime/src/main.mjs --bundle --platform=node --format=esm --outfile=sidecar/ai-runtime/bundle/main.mjs",
     "release": "release-it",
     "release:sync-version": "node scripts/sync-release-version.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.79",
+    "@ai-sdk/google": "^2.0.72",
+    "@ai-sdk/openai": "^2.0.106",
+    "@ai-sdk/openai-compatible": "^1.0.39",
     "@panzerjack/eslint-config": "^3.0.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2",
@@ -22,11 +27,13 @@
     "easy-live2d": "^0.4.3",
     "eslint-plugin-format": "^2.0.1",
     "pixi.js": "^8.17.1",
+    "ai": "^5.0.183",
     "vue": "^3.5.13"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-vue": "^5.2.1",
+    "esbuild": "^0.25.12",
     "release-it": "^19.0.3",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",

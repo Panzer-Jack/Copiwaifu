@@ -53,6 +53,7 @@ pub fn start(app_handle: AppHandle, state: Arc<Mutex<NavigatorState>>) {
                             session_title: None,
                             needs_attention: None,
                             server_port: Some(port),
+                            ai_talk_context: None,
                         },
                     )]
                 }),

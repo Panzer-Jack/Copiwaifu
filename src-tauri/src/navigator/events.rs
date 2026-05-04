@@ -101,6 +101,49 @@ pub struct EventData {
     pub session_title: Option<String>,
     #[serde(default)]
     pub needs_attention: Option<bool>,
+    #[serde(default)]
+    pub turn_start: bool,
+    #[serde(default)]
+    pub turn_fingerprint: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiTalkEventDigest {
+    pub event_type: EventType,
+    pub timestamp_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    pub informative: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiTalkContext {
+    pub agent: AgentType,
+    pub session_id: String,
+    pub state: AgentState,
+    pub phase: SessionPhase,
+    pub turn_index: u64,
+    pub updated_at_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub working_directory: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recent_event_type: Option<EventType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recent_summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_meaningful_summary: Option<String>,
+    pub has_context: bool,
+    pub missing_fields: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<AiTalkEventDigest>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -135,13 +178,21 @@ pub struct IncomingHookEvent {
     pub session_title: Option<String>,
     #[serde(default)]
     pub needs_attention: Option<bool>,
+    #[serde(default)]
+    pub turn_start: Option<bool>,
+    #[serde(default)]
+    pub turn_fingerprint: Option<String>,
 }
 
 impl IncomingHookEvent {
     pub fn into_agent_event(self) -> Result<AgentEvent, String> {
         let agent = self
             .agent
-            .or_else(|| self.agent_id.as_deref().and_then(providers::parse_agent_type))
+            .or_else(|| {
+                self.agent_id
+                    .as_deref()
+                    .and_then(providers::parse_agent_type)
+            })
             .ok_or_else(|| "missing agent".to_string())?;
 
         let event = if let Some(raw_event) = self.event.as_deref() {
@@ -167,6 +218,12 @@ impl IncomingHookEvent {
         }
         if data.needs_attention.is_none() {
             data.needs_attention = self.needs_attention;
+        }
+        if !data.turn_start {
+            data.turn_start = self.turn_start.unwrap_or(false);
+        }
+        if data.turn_fingerprint.is_none() {
+            data.turn_fingerprint = self.turn_fingerprint;
         }
 
         Ok(AgentEvent {
@@ -208,6 +265,8 @@ pub struct StateChangePayload {
     pub needs_attention: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub server_port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ai_talk_context: Option<AiTalkContext>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -226,6 +285,8 @@ pub struct NavigatorSessionPayload {
     pub session_title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub needs_attention: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ai_talk_context: Option<AiTalkContext>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

@@ -1,28 +1,30 @@
 <script setup lang="ts">
-import { convertFileSrc, invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
-import { open } from '@tauri-apps/plugin-dialog'
-import { openUrl } from '@tauri-apps/plugin-opener'
-import { computed, onUnmounted, reactive, ref, watch } from 'vue'
-import { readAvailableMotionGroups } from '../live2d/model'
-import { getLanguageCopy } from '../i18n'
-import { MANUAL_UPDATE_WEBSITE_URL } from '../updater'
-import {
-  ACTION_GROUP_BINDING_SOURCE,
-  AGENT_STATE_ORDER,
-  APP_LANGUAGE,
-  WINDOW_SIZE_PRESET,
-  createEmptyActionGroupBindings,
-  resolveActionGroupBinding,
-} from '../types/agent'
 import type {
   AppBootstrap,
   AppSettings,
+  AiTalkProviderProfile,
   ImportedModelResult,
   ModelScanResult,
   MotionGroupOption,
   TAgentState,
 } from '../types/agent'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { open } from '@tauri-apps/plugin-dialog'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { computed, onUnmounted, reactive, ref, watch } from 'vue'
+import { getLanguageCopy } from '../i18n'
+import { readAvailableMotionGroups } from '../live2d/model'
+import {
+  ACTION_GROUP_BINDING_SOURCE,
+  AGENT_STATE_ORDER,
+  APP_LANGUAGE,
+  createDefaultAiTalkSettings,
+  createEmptyActionGroupBindings,
+  resolveActionGroupBinding,
+  WINDOW_SIZE_PRESET,
+} from '../types/agent'
+import { MANUAL_UPDATE_WEBSITE_URL } from '../updater'
 
 const props = defineProps<{
   bootstrap: AppBootstrap
@@ -34,17 +36,60 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const modelMessage = ref('')
 const isLoadingMotionGroups = ref(false)
+const aiTalkHeadersText = ref('')
 
 const form = reactive<AppSettings>(createFormState(props.bootstrap.settings))
+const aiTalkAdvancedOpen = ref(false)
 const currentScan = ref<ModelScanResult>(props.bootstrap.modelScan)
 const motionGroupOptions = ref<MotionGroupOption[]>(props.bootstrap.modelScan.availableMotionGroups)
 const ui = computed(() => getLanguageCopy(form.language))
 const detectedMotionGroupCount = computed(() => motionGroupOptions.value.length)
 const NAME_MAX_LENGTH = 16
 const DEFAULT_MODEL_DIRECTORY = '/Resources/Yulia'
+const AI_TALK_PROVIDER_OPTIONS = [
+  { id: 'openai', label: 'OpenAI' },
+  { id: 'anthropic', label: 'Anthropic' },
+  { id: 'google', label: 'Google Gemini' },
+  { id: 'deepseek', label: 'DeepSeek' },
+  { id: 'aliyun-bailian', label: 'Alibaba Bailian / Qwen' },
+  { id: 'moonshot', label: 'Moonshot Kimi' },
+  { id: 'zhipu', label: 'Zhipu GLM' },
+  { id: 'volcengine', label: 'Volcengine Ark / Doubao' },
+  { id: 'baidu-qianfan', label: 'Baidu Qianfan / ERNIE' },
+  { id: 'tencent-hunyuan', label: 'Tencent Hunyuan' },
+  { id: 'minimax', label: 'MiniMax' },
+  { id: 'openai-compatible', label: 'OpenAI Compatible' },
+] as const
+const AI_TALK_DEFAULT_MODELS: Record<string, string> = {
+  openai: 'gpt-4o-mini',
+  anthropic: 'claude-3-5-haiku-latest',
+  google: 'gemini-1.5-flash',
+  deepseek: 'deepseek-v4-pro',
+  'aliyun-bailian': 'qwen-plus',
+  moonshot: 'kimi-k2.6',
+  zhipu: 'glm-5.1',
+  volcengine: 'doubao-seed-1-6-251015',
+  'baidu-qianfan': 'ernie-4.5-turbo-128k',
+  'tencent-hunyuan': 'hunyuan-turbos-latest',
+  minimax: 'MiniMax-M2.7',
+}
+const AI_TALK_DEFAULT_BASE_URLS: Record<string, string> = {
+  deepseek: 'https://api.deepseek.com',
+  'aliyun-bailian': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  moonshot: 'https://api.moonshot.cn/v1',
+  zhipu: 'https://open.bigmodel.cn/api/paas/v4',
+  volcengine: 'https://ark.cn-beijing.volces.com/api/v3',
+  'baidu-qianfan': 'https://qianfan.baidubce.com/v2',
+  'tencent-hunyuan': 'https://api.hunyuan.cloud.tencent.com/v1',
+  minimax: 'https://api.minimaxi.com/v1',
+}
 let motionGroupLoadToken = 0
+let isApplyingSettings = false
 
 const currentWindow = getCurrentWindow()
+const aiTalkModelPlaceholder = computed(() => (
+  AI_TALK_DEFAULT_MODELS[form.aiTalk.provider] ?? ui.value.settings.aiTalkModelPlaceholder
+))
 
 watch(() => props.bootstrap.settings, (settings) => {
   applySettings(settings)
@@ -63,11 +108,37 @@ watch(
   { immediate: true },
 )
 
+watch(() => form.aiTalk.provider, (provider, previousProvider) => {
+  if (isApplyingSettings) {
+    return
+  }
+  if (previousProvider) {
+    storeCurrentAiTalkProviderProfile(previousProvider)
+  }
+
+  applyAiTalkProviderProfile(provider)
+}, { flush: 'sync' })
+
 onUnmounted(() => {
   motionGroupLoadToken += 1
 })
 
 function createFormState(settings: AppSettings): AppSettings {
+  const aiTalk = {
+    ...createDefaultAiTalkSettings(),
+    ...settings.aiTalk,
+    headers: {
+      ...(settings.aiTalk?.headers ?? {}),
+    },
+    providerProfiles: cloneAiTalkProviderProfiles(settings.aiTalk?.providerProfiles ?? {}),
+  }
+  aiTalk.providerProfiles[aiTalk.provider] = {
+    apiKey: aiTalk.apiKey,
+    modelId: aiTalk.modelId,
+    baseUrl: aiTalk.baseUrl,
+    headers: { ...aiTalk.headers },
+  }
+
   return {
     name: settings.name,
     language: settings.language,
@@ -78,20 +149,106 @@ function createFormState(settings: AppSettings): AppSettings {
       ...createEmptyActionGroupBindings(),
       ...settings.actionGroupBindings,
     },
+    aiTalk,
   }
 }
 
 function applySettings(settings: AppSettings) {
   const next = createFormState(settings)
-  form.name = next.name
-  form.language = next.language
-  form.autoStart = next.autoStart
-  form.modelDirectory = next.modelDirectory
-  form.windowSize = next.windowSize
+  isApplyingSettings = true
+  try {
+    form.name = next.name
+    form.language = next.language
+    form.autoStart = next.autoStart
+    form.modelDirectory = next.modelDirectory
+    form.windowSize = next.windowSize
+    form.aiTalk.enabled = next.aiTalk.enabled
+    form.aiTalk.provider = next.aiTalk.provider
+    form.aiTalk.apiKey = next.aiTalk.apiKey
+    form.aiTalk.modelId = next.aiTalk.modelId
+    form.aiTalk.baseUrl = next.aiTalk.baseUrl
+    form.aiTalk.headers = { ...next.aiTalk.headers }
+    form.aiTalk.providerProfiles = cloneAiTalkProviderProfiles(next.aiTalk.providerProfiles)
+    aiTalkHeadersText.value = JSON.stringify(next.aiTalk.headers, null, 2)
+    aiTalkAdvancedOpen.value = shouldOpenAiTalkAdvanced(next.aiTalk)
 
-  for (const state of AGENT_STATE_ORDER) {
-    form.actionGroupBindings[state] = next.actionGroupBindings[state]
+    for (const state of AGENT_STATE_ORDER) {
+      form.actionGroupBindings[state] = next.actionGroupBindings[state]
+    }
+  } finally {
+    isApplyingSettings = false
   }
+}
+
+function shouldOpenAiTalkAdvanced(settings: AppSettings['aiTalk']) {
+  const defaultBaseUrl = AI_TALK_DEFAULT_BASE_URLS[settings.provider]
+  const hasCustomBaseUrl = Boolean(settings.baseUrl?.trim())
+    && normalizeAiTalkBaseUrl(settings.baseUrl) !== normalizeAiTalkBaseUrl(defaultBaseUrl)
+  return settings.provider === 'openai-compatible'
+    || hasCustomBaseUrl
+    || Object.keys(settings.headers ?? {}).length > 0
+}
+
+function normalizeAiTalkBaseUrl(value: string | null | undefined) {
+  return (value ?? '').trim().replace(/\/+$/, '').toLowerCase()
+}
+
+function cloneAiTalkProviderProfiles(profiles: Record<string, AiTalkProviderProfile>) {
+  return Object.fromEntries(
+    Object.entries(profiles).map(([provider, profile]) => [
+      provider,
+      cloneAiTalkProviderProfile(profile),
+    ]),
+  )
+}
+
+function cloneAiTalkProviderProfile(profile: AiTalkProviderProfile): AiTalkProviderProfile {
+  return {
+    apiKey: profile.apiKey ?? '',
+    modelId: profile.modelId ?? '',
+    baseUrl: profile.baseUrl ?? null,
+    headers: { ...(profile.headers ?? {}) },
+  }
+}
+
+function createDefaultAiTalkProviderProfile(provider: string): AiTalkProviderProfile {
+  return {
+    apiKey: '',
+    modelId: AI_TALK_DEFAULT_MODELS[provider] ?? '',
+    baseUrl: AI_TALK_DEFAULT_BASE_URLS[provider] ?? null,
+    headers: {},
+  }
+}
+
+function storeCurrentAiTalkProviderProfile(provider: string, headers = headersFromTextOrCurrent()) {
+  form.aiTalk.providerProfiles[provider] = {
+    apiKey: form.aiTalk.apiKey,
+    modelId: form.aiTalk.modelId,
+    baseUrl: form.aiTalk.baseUrl?.trim() || null,
+    headers,
+  }
+}
+
+function applyAiTalkProviderProfile(provider: string) {
+  const profile = cloneAiTalkProviderProfile(
+    form.aiTalk.providerProfiles[provider] ?? createDefaultAiTalkProviderProfile(provider),
+  )
+
+  form.aiTalk.apiKey = profile.apiKey
+  form.aiTalk.modelId = profile.modelId
+  form.aiTalk.baseUrl = profile.baseUrl
+  form.aiTalk.headers = { ...profile.headers }
+  aiTalkHeadersText.value = JSON.stringify(profile.headers, null, 2)
+  aiTalkAdvancedOpen.value = shouldOpenAiTalkAdvanced({
+    ...form.aiTalk,
+    provider,
+    baseUrl: profile.baseUrl,
+    headers: profile.headers,
+  })
+}
+
+function headersFromTextOrCurrent() {
+  return parseAiTalkHeaders() ?? { ...form.aiTalk.headers }
 }
 
 function clearNotice() {
@@ -150,16 +307,14 @@ async function loadMotionGroupOptions() {
     motionGroupOptions.value = options.length > 0
       ? options
       : currentScan.value.availableMotionGroups
-  }
-  catch (error) {
+  } catch (error) {
     if (token !== motionGroupLoadToken) {
       return
     }
 
     console.warn('failed to load motion groups with easy-live2d', error)
     motionGroupOptions.value = currentScan.value.availableMotionGroups
-  }
-  finally {
+  } finally {
     if (token === motionGroupLoadToken) {
       isLoadingMotionGroups.value = false
     }
@@ -177,11 +332,9 @@ async function resetToDefaultModel() {
     })
     currentScan.value = scan
     modelMessage.value = ui.value.settings.switchedToDefaultModel
-  }
-  catch (error) {
+  } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
-  }
-  finally {
+  } finally {
     isScanning.value = false
   }
 }
@@ -210,11 +363,9 @@ async function pickModelDirectory() {
     form.modelDirectory = imported.importedModelDirectory
     currentScan.value = imported.modelScan
     modelMessage.value = ui.value.settings.modelValidated
-  }
-  catch (error) {
+  } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
-  }
-  finally {
+  } finally {
     isScanning.value = false
   }
 }
@@ -233,6 +384,13 @@ async function save() {
     return
   }
 
+  const parsedHeaders = parseAiTalkHeaders()
+  if (!parsedHeaders) {
+    errorMessage.value = ui.value.settings.aiTalkHeadersInvalid
+    return
+  }
+  storeCurrentAiTalkProviderProfile(form.aiTalk.provider, parsedHeaders)
+
   isSaving.value = true
 
   try {
@@ -241,15 +399,21 @@ async function save() {
         ...form,
         name: trimmedName,
         actionGroupBindings: { ...form.actionGroupBindings },
+        aiTalk: {
+          ...form.aiTalk,
+          headers: parsedHeaders,
+          baseUrl: form.aiTalk.baseUrl?.trim() || null,
+          apiKey: form.aiTalk.apiKey.trim(),
+          modelId: form.aiTalk.modelId.trim(),
+          providerProfiles: sanitizeAiTalkProviderProfiles(form.aiTalk.providerProfiles),
+        },
       },
     })
 
     successMessage.value = ui.value.settings.saveSuccess
-  }
-  catch (error) {
+  } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
-  }
-  finally {
+  } finally {
     isSaving.value = false
   }
 }
@@ -261,8 +425,7 @@ function cancel() {
 async function openOfficialWebsite() {
   try {
     await openUrl(MANUAL_UPDATE_WEBSITE_URL)
-  }
-  catch (error) {
+  } catch (error) {
     console.warn('failed to open official website', error)
   }
 }
@@ -284,6 +447,57 @@ function actionGroupBindingStatus(state: TAgentState) {
   }
 
   return ui.value.settings.unresolvedBindingStatus
+}
+
+function parseAiTalkHeaders() {
+  const raw = aiTalkHeadersText.value.trim()
+  if (!raw) {
+    return {}
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+      return null
+    }
+
+    const entries = Object.entries(parsed)
+    if (entries.some(([key, value]) => !key.trim() || typeof value !== 'string')) {
+      return null
+    }
+
+    return Object.fromEntries(
+      entries
+        .filter(([, value]) => (value as string).trim())
+        .map(([key, value]) => [key.trim(), (value as string).trim()]),
+    )
+  } catch {
+    return null
+  }
+}
+
+function sanitizeAiTalkProviderProfiles(profiles: Record<string, AiTalkProviderProfile>) {
+  return Object.fromEntries(
+    Object.entries(profiles)
+      .map(([provider, profile]) => [
+        provider.trim(),
+        {
+          apiKey: profile.apiKey.trim(),
+          modelId: profile.modelId.trim(),
+          baseUrl: profile.baseUrl?.trim() || null,
+          headers: sanitizeAiTalkHeaders(profile.headers),
+        },
+      ] as const)
+      .filter(([provider]) => provider),
+  )
+}
+
+function sanitizeAiTalkHeaders(headers: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(headers)
+      .map(([key, value]) => [key.trim(), value.trim()] as const)
+      .filter(([key, value]) => key && value),
+  )
 }
 </script>
 
@@ -314,6 +528,107 @@ function actionGroupBindingStatus(state: TAgentState) {
           type="checkbox"
         >
       </label>
+
+      <div class="field ai-talk">
+        <label class="field--switch">
+          <span>
+            <strong>{{ ui.settings.aiTalkLabel }}</strong>
+            <small>{{ ui.settings.aiTalkHint }}</small>
+          </span>
+          <input
+            v-model="form.aiTalk.enabled"
+            type="checkbox"
+          >
+        </label>
+
+        <div
+          v-if="form.aiTalk.enabled"
+          class="ai-talk__grid"
+        >
+          <label class="field">
+            <span class="field__label">{{ ui.settings.aiTalkProviderLabel }}</span>
+            <select
+              v-model="form.aiTalk.provider"
+              class="field__select"
+            >
+              <option
+                v-for="provider in AI_TALK_PROVIDER_OPTIONS"
+                :key="provider.id"
+                :value="provider.id"
+              >
+                {{ provider.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">{{ ui.settings.aiTalkModelLabel }}</span>
+            <input
+              v-model="form.aiTalk.modelId"
+              class="field__input"
+              type="text"
+              :placeholder="aiTalkModelPlaceholder"
+            >
+          </label>
+
+          <label class="field ai-talk__full">
+            <span class="field__label">{{ ui.settings.aiTalkApiKeyLabel }}</span>
+            <input
+              v-model="form.aiTalk.apiKey"
+              class="field__input"
+              type="password"
+              autocomplete="off"
+              :placeholder="ui.settings.aiTalkApiKeyPlaceholder"
+            >
+            <small class="field__hint">{{ ui.settings.aiTalkApiKeyHint }}</small>
+          </label>
+
+          <button
+            class="advanced-toggle ai-talk__full"
+            type="button"
+            :aria-expanded="aiTalkAdvancedOpen"
+            @click="aiTalkAdvancedOpen = !aiTalkAdvancedOpen"
+          >
+            <span>
+              <strong>{{ ui.settings.aiTalkAdvancedLabel }}</strong>
+              <small>{{ ui.settings.aiTalkAdvancedHint }}</small>
+            </span>
+            <span
+              class="advanced-toggle__chevron"
+              :class="{ 'advanced-toggle__chevron--open': aiTalkAdvancedOpen }"
+              aria-hidden="true"
+            />
+          </button>
+
+          <div
+            v-if="aiTalkAdvancedOpen"
+            class="ai-talk__advanced ai-talk__full"
+          >
+            <label class="field">
+              <span class="field__label">{{ ui.settings.aiTalkBaseUrlLabel }}</span>
+              <input
+                v-model="form.aiTalk.baseUrl"
+                class="field__input"
+                type="text"
+                :placeholder="ui.settings.aiTalkBaseUrlPlaceholder"
+              >
+              <small class="field__hint">{{ ui.settings.aiTalkBaseUrlHint }}</small>
+            </label>
+
+            <label class="field">
+              <span class="field__label">{{ ui.settings.aiTalkHeadersLabel }}</span>
+              <textarea
+                v-model="aiTalkHeadersText"
+                class="field__textarea"
+                spellcheck="false"
+                rows="4"
+                :placeholder="ui.settings.aiTalkHeadersPlaceholder"
+              />
+              <small class="field__hint">{{ ui.settings.aiTalkHeadersHint }}</small>
+            </label>
+          </div>
+        </div>
+      </div>
 
       <label class="field">
         <span class="field__label">{{ ui.settings.languageLabel }}</span>
@@ -442,8 +757,8 @@ function actionGroupBindingStatus(state: TAgentState) {
             <span class="binding-row__meta">
               <strong>{{ ui.stateLabels[state] }}</strong>
               <small
+                class="binding-row__status"
                 :class="[
-                  'binding-row__status',
                   `binding-row__status--${resolvedActionGroupBindings[state].source}`,
                 ]"
               >
@@ -602,7 +917,8 @@ function actionGroupBindingStatus(state: TAgentState) {
 }
 
 .field__input,
-.field__select {
+.field__select,
+.field__textarea {
   width: 100%;
   min-height: 42px;
   padding: 0 14px;
@@ -612,6 +928,14 @@ function actionGroupBindingStatus(state: TAgentState) {
   color: #233635;
   font-size: 14px;
   box-sizing: border-box;
+}
+
+.field__textarea {
+  min-height: 92px;
+  padding: 12px 14px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.45;
 }
 
 .field__hint,
@@ -624,6 +948,81 @@ function actionGroupBindingStatus(state: TAgentState) {
 
 .field__path {
   word-break: break-all;
+}
+
+.ai-talk {
+  padding: 14px;
+  border: 1px solid rgba(70, 107, 105, 0.14);
+  border-radius: 18px;
+  background: rgba(247, 250, 248, 0.72);
+}
+
+.ai-talk__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ai-talk__grid .field + .field {
+  margin-top: 0;
+}
+
+.ai-talk__full {
+  grid-column: 1 / -1;
+}
+
+.ai-talk__advanced {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(70, 107, 105, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 50px;
+  padding: 10px 12px;
+  border: 1px solid rgba(70, 107, 105, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.58);
+  color: #33514f;
+  text-align: left;
+  cursor: pointer;
+}
+
+.advanced-toggle strong,
+.advanced-toggle small {
+  display: block;
+}
+
+.advanced-toggle strong {
+  font-size: 13px;
+}
+
+.advanced-toggle small {
+  margin-top: 4px;
+  color: #617a78;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.advanced-toggle__chevron {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #617a78;
+  border-bottom: 2px solid #617a78;
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.advanced-toggle__chevron--open {
+  transform: rotate(225deg);
 }
 
 .model-picker,

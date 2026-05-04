@@ -13,6 +13,7 @@ mod reconcile;
 mod reducer;
 pub mod server;
 pub mod session_recovery;
+mod session_store;
 pub mod state;
 
 use events::NavigatorEmission;

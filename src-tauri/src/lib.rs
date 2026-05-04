@@ -3,6 +3,7 @@ use tauri::{ActivationPolicy, Manager};
 #[allow(deprecated)]
 use tauri_nspanel::{cocoa::appkit::NSWindowCollectionBehavior, WebviewWindowExt};
 
+mod ai_talk;
 mod navigator;
 mod shell;
 
@@ -74,6 +75,7 @@ pub fn run() {
             greet,
             navigator::commands::get_agent_status,
             navigator::commands::get_navigator_sessions,
+            ai_talk::generate_ai_talk,
             navigator::commands::uninstall_hooks,
             shell::commands::get_app_bootstrap,
             shell::commands::scan_model_directory,

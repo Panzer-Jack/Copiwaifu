@@ -1,15 +1,17 @@
 <script setup lang="ts">
+import type { UnlistenFn } from '@tauri-apps/api/event'
+import type { AgentType, AppBootstrap, TAgentState } from '../types/agent'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import PetContextMenu from '../components/PetContextMenu.vue'
 import SpeechBubble from '../components/SpeechBubble.vue'
-import { useContextMenu } from '../composables/useContextMenu'
-import { formatAgentLabel, getLanguageCopy } from '../i18n'
 import { useAgentState } from '../composables/useAgentState'
+import { useContextMenu } from '../composables/useContextMenu'
 import { useMainWindowLive2d } from '../composables/useMainWindowLive2d'
-import { useSpeechBubble } from '../composables/useSpeechBubble'
+import { limitAiTalkBubbleText, useSpeechBubble } from '../composables/useSpeechBubble'
+import { formatAgentLabel, getLanguageCopy } from '../i18n'
 import { AGENT_STATE } from '../types/agent'
-import type { AgentType, AppBootstrap, TAgentState } from '../types/agent'
 
 const props = defineProps<{
   bootstrap: AppBootstrap
@@ -22,6 +24,9 @@ const lastActiveAgent = ref<AgentType | null>(null)
 let idleGreetingTimer: ReturnType<typeof setInterval> | null = null
 let sameStateBubbleTimer: ReturnType<typeof setTimeout> | null = null
 let lastStateBubbleShownAt = 0
+let aiTalkRequestToken = 0
+let unlistenAiTalkDebug: UnlistenFn | null = null
+let aiTalkDebugListenerDisposed = false
 
 const MENU_WIDTH = 176
 const MENU_HEIGHT = 196
@@ -109,6 +114,29 @@ function bubbleTextForState(state: TAgentState) {
 }
 
 const stateBubbleText = computed(() => bubbleTextForState(currentState.value))
+const aiTalkTriggerKey = computed(() => {
+  const context = sessionInfo.value.aiTalkContext
+  if (!context) {
+    return ''
+  }
+
+  return [
+    context.agent,
+    context.sessionId,
+    context.state,
+    context.turnIndex,
+    context.updatedAtMs,
+  ].join(':')
+})
+
+interface AiTalkGenerateResponse {
+  text: string
+}
+
+interface AiTalkDebugPayload {
+  stage: string
+  data: unknown
+}
 
 function clearSameStateBubbleTimer() {
   if (sameStateBubbleTimer) {
@@ -121,9 +149,65 @@ function isUrgentBubbleState(state: TAgentState) {
   return state === AGENT_STATE.ERROR || state === AGENT_STATE.NEEDS_ATTENTION
 }
 
+function isAiTalkTerminalState(state: TAgentState) {
+  return state === AGENT_STATE.COMPLETE || state === AGENT_STATE.ERROR
+}
+
 function showStateBubble(text: string, duration = 2200) {
   lastStateBubbleShownAt = Date.now()
   say(text, duration)
+}
+
+async function showAiTalkOrFallback(state: TAgentState, fallbackText: string) {
+  const agent = activeAgent.value ?? lastActiveAgent.value
+  const sessionId = sessionInfo.value.sessionId
+  if (!agent || !sessionId) {
+    showStateBubble(fallbackText)
+    return
+  }
+
+  const token = ++aiTalkRequestToken
+  const request = {
+    agent,
+    sessionId,
+    state,
+    windowSize: props.bootstrap.settings.windowSize,
+    language: props.bootstrap.settings.language,
+  }
+
+  console.log('[AI Talk] generate request', {
+    request,
+    context: sessionInfo.value.aiTalkContext,
+  })
+
+  try {
+    const response = await invoke<AiTalkGenerateResponse | null>('generate_ai_talk', {
+      request,
+    })
+
+    console.log('[AI Talk] generate response', response)
+
+    if (token !== aiTalkRequestToken || currentState.value !== state) {
+      return
+    }
+
+    const text = response?.text
+      ? limitAiTalkBubbleText(
+          response.text,
+          props.bootstrap.settings.windowSize,
+          props.bootstrap.settings.language,
+        )
+      : fallbackText
+
+    if (text) {
+      showStateBubble(text, response?.text ? 2800 : 2200)
+    }
+  } catch (error) {
+    console.warn('failed to generate AI Talk bubble', error)
+    if (token === aiTalkRequestToken && currentState.value === state) {
+      showStateBubble(fallbackText)
+    }
+  }
 }
 
 function scheduleSameStateBubbleRefresh(delay: number) {
@@ -174,12 +258,31 @@ async function exitApp() {
 }
 
 onMounted(() => {
+  aiTalkDebugListenerDisposed = false
   window.addEventListener('click', closeMenu)
   window.addEventListener('blur', closeMenu)
   window.addEventListener('keydown', handleWindowKeydown)
+  void listen<AiTalkDebugPayload>('ai-talk:debug', (event) => {
+    console.log('[AI Talk debug]', event.payload.stage, event.payload.data)
+  })
+    .then((unlisten) => {
+      if (aiTalkDebugListenerDisposed) {
+        unlisten()
+        return
+      }
+      unlistenAiTalkDebug = unlisten
+    })
+    .catch((error) => {
+      console.warn('failed to listen for AI Talk debug events', error)
+    })
 })
 
 onUnmounted(() => {
+  aiTalkDebugListenerDisposed = true
+  if (unlistenAiTalkDebug) {
+    void unlistenAiTalkDebug()
+    unlistenAiTalkDebug = null
+  }
   if (idleGreetingTimer) {
     clearInterval(idleGreetingTimer)
   }
@@ -196,9 +299,10 @@ watch(activeAgent, (agent) => {
   }
 })
 
-watch([currentState, stateBubbleText], ([state, text], [previousState, previousText]) => {
+watch([currentState, stateBubbleText, aiTalkTriggerKey], ([state, text, triggerKey], [previousState, previousText, previousTriggerKey]) => {
   if (state !== previousState) {
     clearSameStateBubbleTimer()
+    aiTalkRequestToken += 1
     void playState(state)
   }
 
@@ -215,7 +319,15 @@ watch([currentState, stateBubbleText], ([state, text], [previousState, previousT
     return
   }
 
-  if (!text || (state === previousState && text === previousText)) {
+  const aiTalkTriggerChanged = triggerKey && triggerKey !== previousTriggerKey
+
+  if (!text || (state === previousState && text === previousText && !aiTalkTriggerChanged)) {
+    return
+  }
+
+  if (isAiTalkTerminalState(state)) {
+    clearSameStateBubbleTimer()
+    void showAiTalkOrFallback(state, text)
     return
   }
 
@@ -293,7 +405,6 @@ watch(
 </template>
 
 <style scoped>
-
 .safe-top {
   height: var(--main-window-safe-top-height, 20px);
   cursor: move;

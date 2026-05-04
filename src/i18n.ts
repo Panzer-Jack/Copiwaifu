@@ -32,6 +32,23 @@ type LanguageCopy = {
     versionLabel: string
     autoStartLabel: string
     autoStartHint: string
+    aiTalkLabel: string
+    aiTalkHint: string
+    aiTalkProviderLabel: string
+    aiTalkModelLabel: string
+    aiTalkModelPlaceholder: string
+    aiTalkApiKeyLabel: string
+    aiTalkApiKeyPlaceholder: string
+    aiTalkApiKeyHint: string
+    aiTalkAdvancedLabel: string
+    aiTalkAdvancedHint: string
+    aiTalkBaseUrlLabel: string
+    aiTalkBaseUrlPlaceholder: string
+    aiTalkBaseUrlHint: string
+    aiTalkHeadersLabel: string
+    aiTalkHeadersPlaceholder: string
+    aiTalkHeadersHint: string
+    aiTalkHeadersInvalid: string
     languageLabel: string
     nameLabel: string
     namePlaceholder: string
@@ -103,6 +120,23 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       versionLabel: 'Current Version',
       autoStartLabel: 'Launch at Login',
       autoStartHint: 'After saving, this will sync with the system login launch setting so she can boot up with you.',
+      aiTalkLabel: 'AI Talk',
+      aiTalkHint: 'Copiwaifu can engage in interesting chat interactions based on the conversation context of your AI tools like CC and Codex.',
+      aiTalkProviderLabel: 'Provider',
+      aiTalkModelLabel: 'Model ID',
+      aiTalkModelPlaceholder: 'gpt-4o-mini',
+      aiTalkApiKeyLabel: 'API Key',
+      aiTalkApiKeyPlaceholder: 'Stored locally',
+      aiTalkApiKeyHint: 'The key is saved locally per provider and only used for the selected model service.',
+      aiTalkAdvancedLabel: 'Advanced Settings',
+      aiTalkAdvancedHint: 'Only needed for API proxies, compatible services, or provider-specific headers.',
+      aiTalkBaseUrlLabel: 'Base URL (compatibility/proxy only)',
+      aiTalkBaseUrlPlaceholder: 'Usually auto-filled by the selected provider',
+      aiTalkBaseUrlHint: 'Leave this as the default unless your account uses another compatible endpoint or proxy.',
+      aiTalkHeadersLabel: 'Custom Headers (advanced, optional)',
+      aiTalkHeadersPlaceholder: '{\n  "HTTP-Referer": "https://example.com"\n}',
+      aiTalkHeadersHint: 'Use JSON only when the service requires extra headers such as appid, referer, or routing metadata.',
+      aiTalkHeadersInvalid: 'Custom headers must be a JSON object whose values are strings.',
       languageLabel: 'Language',
       nameLabel: 'Character Name',
       namePlaceholder: 'Yulia',
@@ -192,6 +226,23 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       versionLabel: '当前版本',
       autoStartLabel: '开机自启',
       autoStartHint: '保存后会和系统登录启动状态同步，让她陪你一起开机报到。',
+      aiTalkLabel: 'AI Talk',
+      aiTalkHint: 'Copiwaifu 可以基于你的CC、Codex等AI工具的回话上下文来进行有意思的聊天互动。',
+      aiTalkProviderLabel: '模型供应商',
+      aiTalkModelLabel: '模型 ID',
+      aiTalkModelPlaceholder: 'gpt-4o-mini',
+      aiTalkApiKeyLabel: 'API Key',
+      aiTalkApiKeyPlaceholder: '保存在本机',
+      aiTalkApiKeyHint: 'API Key 会按模型供应商分别保存在本机，仅用于调用当前选择的模型服务。',
+      aiTalkAdvancedLabel: '高级设置',
+      aiTalkAdvancedHint: '仅在 API 代理、兼容接口或服务商要求额外 header 时需要。',
+      aiTalkBaseUrlLabel: 'Base URL（兼容接口 / 代理专用）',
+      aiTalkBaseUrlPlaceholder: '通常会随所选服务商自动填入',
+      aiTalkBaseUrlHint: '除非你的账号使用其他兼容入口或代理地址，否则保持默认即可。',
+      aiTalkHeadersLabel: '自定义请求头（高级，可选）',
+      aiTalkHeadersPlaceholder: '{\n  "HTTP-Referer": "https://example.com"\n}',
+      aiTalkHeadersHint: '仅当服务商要求 appid、referer、路由标记等额外 header 时填写，格式必须是 JSON。',
+      aiTalkHeadersInvalid: '自定义请求头必须是 JSON 对象，且值必须是字符串。',
       languageLabel: '语言',
       nameLabel: '角色名',
       namePlaceholder: 'Yulia',
@@ -281,6 +332,23 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
       versionLabel: '現在のバージョン',
       autoStartLabel: 'ログイン時に起動',
       autoStartHint: '保存後、システムのログイン起動設定と同期し、起動時に一緒に立ち上がります。',
+      aiTalkLabel: 'AI Talk',
+      aiTalkHint: 'Copiwaifu はあなたの CC、Codex などの AI ツールの会話コンテキストに基づいて、面白いチャットインタラクションを行うことができます。',
+      aiTalkProviderLabel: 'プロバイダー',
+      aiTalkModelLabel: 'モデル ID',
+      aiTalkModelPlaceholder: 'gpt-4o-mini',
+      aiTalkApiKeyLabel: 'API Key',
+      aiTalkApiKeyPlaceholder: 'ローカルに保存',
+      aiTalkApiKeyHint: 'API Key はプロバイダーごとにローカル保存され、選択したモデルサービスの呼び出しにだけ使われます。',
+      aiTalkAdvancedLabel: '詳細設定',
+      aiTalkAdvancedHint: 'API プロキシ、互換サービス、追加ヘッダーが必要な場合だけ使います。',
+      aiTalkBaseUrlLabel: 'Base URL（互換 API / プロキシ用）',
+      aiTalkBaseUrlPlaceholder: '通常は選択したプロバイダーで自動入力されます',
+      aiTalkBaseUrlHint: '別の互換エンドポイントやプロキシを使う場合以外は、既定値のままで問題ありません。',
+      aiTalkHeadersLabel: 'カスタムヘッダー（詳細、任意）',
+      aiTalkHeadersPlaceholder: '{\n  "HTTP-Referer": "https://example.com"\n}',
+      aiTalkHeadersHint: 'appid、referer、ルーティング情報など追加ヘッダーが必要なサービスでのみ JSON 形式で入力します。',
+      aiTalkHeadersInvalid: 'カスタムヘッダーは、値が文字列の JSON オブジェクトである必要があります。',
       languageLabel: '言語',
       nameLabel: 'キャラクター名',
       namePlaceholder: 'Yulia',
