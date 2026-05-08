@@ -42,7 +42,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 22
 
       - name: setup pnpm
         uses: pnpm/action-setup@v5
