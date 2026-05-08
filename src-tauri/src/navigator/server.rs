@@ -1,6 +1,6 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     sync::{Arc, Mutex},
     thread,
 };
@@ -14,11 +14,11 @@ use super::{
     events::{IncomingHookEvent, NavigatorEmission},
     state::NavigatorState,
 };
+use crate::platform;
 use crate::shell;
 
 const DEFAULT_PORT: u16 = 23333;
 const PORT_ATTEMPTS: u16 = 10;
-const TMP_PORT_FILE: &str = "/tmp/copiwaifu-port";
 
 pub fn start(app_handle: AppHandle, state: Arc<Mutex<NavigatorState>>) {
     thread::spawn(move || {
@@ -204,8 +204,10 @@ fn content_type_for(path: &Path) -> &'static str {
 }
 
 fn write_port_files(port: u16) {
-    let _ = write_port_file(primary_port_file().as_path(), port);
-    let _ = write_port_file(Path::new(TMP_PORT_FILE), port);
+    if let Ok(path) = platform::primary_port_file() {
+        let _ = write_port_file(&path, port);
+    }
+    let _ = write_port_file(&platform::fallback_port_file(), port);
 }
 
 fn write_port_file(path: &Path, port: u16) -> Result<(), String> {
@@ -213,15 +215,4 @@ fn write_port_file(path: &Path, port: u16) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|err| err.to_string())?;
     }
     fs::write(path, port.to_string()).map_err(|err| err.to_string())
-}
-
-fn primary_port_file() -> PathBuf {
-    home_dir()
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join(".copiwaifu")
-        .join("port")
-}
-
-fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
 }

@@ -43,7 +43,10 @@ function normalizeEvent(ev) {
   return null
 }
 
-const PORT_FILES = [path.join(os.homedir(), '.copiwaifu', 'port'), '/tmp/copiwaifu-port']
+const PORT_FILES = [
+  path.join(os.homedir(), '.copiwaifu', 'port'),
+  path.join(os.tmpdir(), 'copiwaifu-port'),
+]
 const SESSION_DIR = path.join(os.homedir(), '.copiwaifu', 'sessions')
 const HOOKS_FILE = path.join(os.homedir(), '.copiwaifu', 'hooks', 'original-hooks.json')
 
