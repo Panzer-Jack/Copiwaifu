@@ -18,6 +18,7 @@ jobs:
         platform:
           - windows-latest
           - ubuntu-latest
+          - macos-latest
 
     steps:
       - name: checkout

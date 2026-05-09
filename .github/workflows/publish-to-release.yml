@@ -21,6 +21,8 @@ jobs:
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
+          - platform: 'windows-latest'
+            args: '--bundles nsis,msi'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -29,7 +31,7 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: 22
 
       - name: setup pnpm
         uses: pnpm/action-setup@v5
@@ -43,14 +45,19 @@ jobs:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: install Windows bundling tools
+        if: matrix.platform == 'windows-latest'
+        run: choco install nsis wixtoolset --no-progress -y
+
       - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: validate updater key
+        shell: bash
         run: |
-          printf '%s' "${{ secrets.TAURI_PRIVATE_KEY }}" > /tmp/tauri.key
-          echo test > /tmp/tauri-sign-test.txt
-          pnpm tauri signer sign /tmp/tauri-sign-test.txt -f /tmp/tauri.key -p "${{ secrets.TAURI_KEY_PASSWORD }}"
+          printf '%s' "${{ secrets.TAURI_PRIVATE_KEY }}" > "$RUNNER_TEMP/tauri.key"
+          echo test > "$RUNNER_TEMP/tauri-sign-test.txt"
+          pnpm tauri signer sign "$RUNNER_TEMP/tauri-sign-test.txt" -f "$RUNNER_TEMP/tauri.key" -p "${{ secrets.TAURI_KEY_PASSWORD }}"
 
       - uses: tauri-apps/tauri-action@v0.6.0
         env:
