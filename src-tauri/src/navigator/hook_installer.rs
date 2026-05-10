@@ -6,9 +6,10 @@ use super::hook_helpers::{
     backup_existing_hooks, backup_path, claude_hook_obj, claude_settings_path, cmd_has_marker,
     codex_config_path, copilot_settings_path, gemini_settings_path, hook_command, hook_dir,
     opencode_config_path, opencode_config_path_new, opencode_plugin_dir, opencode_plugin_path,
-    read_json_or_default, runtime_dir, toml_build_notify, toml_remove_notify,
-    toml_upsert_notify, write_json, SOURCE_MARKER,
+    read_json_or_default, runtime_dir, toml_build_notify, toml_remove_notify, toml_upsert_notify,
+    write_json, SOURCE_MARKER,
 };
+use crate::platform;
 
 const COPIWAIFU_HOOK: &str = include_str!("../../../hooks/copiwaifu-hook.js");
 const COPIWAIFU_OPENCODE_PLUGIN: &str = include_str!("../../../hooks/copiwaifu-opencode.js");
@@ -49,7 +50,7 @@ pub fn uninstall_hooks() -> Result<(), String> {
         fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
     }
     let _ = fs::remove_file(runtime_dir()?.join("port"));
-    let _ = fs::remove_file("/tmp/copiwaifu-port");
+    let _ = fs::remove_file(platform::fallback_port_file());
     Ok(())
 }
 
@@ -277,11 +278,7 @@ const GEMINI_EVENTS: &[&str] = &[
 
 fn install_gemini_hooks(script: &Path) -> Result<(), String> {
     let config = gemini_settings_path()?;
-    if !config
-        .parent()
-        .map(Path::exists)
-        .unwrap_or(false)
-    {
+    if !config.parent().map(Path::exists).unwrap_or(false) {
         return Ok(());
     }
     let mut root = read_json_or_default(&config)?;
@@ -383,16 +380,13 @@ fn remove_opencode_plugin() -> Result<(), String> {
 }
 
 fn register_opencode_plugin(config_path: &Path, plugin_path: &Path) -> Result<(), String> {
-    let plugin_ref = format!("file://{}", plugin_path.display());
+    let plugin_ref = file_url(plugin_path);
     let mut root = read_json_or_default(config_path)?;
     if !root.is_object() {
         root = json!({});
     }
 
-    let mut plugins = root["plugin"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default();
+    let mut plugins = root["plugin"].as_array().cloned().unwrap_or_default();
     plugins.retain(|entry| {
         !entry
             .as_str()
@@ -407,6 +401,15 @@ fn register_opencode_plugin(config_path: &Path, plugin_path: &Path) -> Result<()
     }
 
     write_json(config_path, &root)
+}
+
+fn file_url(path: &Path) -> String {
+    let path = path.to_string_lossy().replace('\\', "/");
+    if cfg!(windows) {
+        format!("file:///{path}")
+    } else {
+        format!("file://{path}")
+    }
 }
 
 fn cleanup_opencode_plugin_registration(config_path: &Path) -> Result<(), String> {

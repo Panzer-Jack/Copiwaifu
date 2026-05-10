@@ -1,12 +1,16 @@
-use tauri::{ActivationPolicy, Manager};
+#[cfg(target_os = "macos")]
+use tauri::ActivationPolicy;
+use tauri::Manager;
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
 use tauri_nspanel::{cocoa::appkit::NSWindowCollectionBehavior, WebviewWindowExt};
 
+#[cfg(target_os = "macos")]
 use std::process::Command;
 
 mod ai_talk;
 mod navigator;
+mod platform;
 mod shell;
 
 #[allow(non_upper_case_globals)]
@@ -37,6 +41,7 @@ fn elevate_desktop_pet_window(window: &tauri::WebviewWindow) -> tauri::Result<()
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
 fn fix_path_env() {
     if std::env::var_os("PATH")
         .map(|p| p.to_string_lossy().contains("/usr/local"))
@@ -46,10 +51,7 @@ fn fix_path_env() {
     }
 
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-    if let Ok(output) = Command::new(&shell)
-        .args(["-ilc", "echo $PATH"])
-        .output()
-    {
+    if let Ok(output) = Command::new(&shell).args(["-ilc", "echo $PATH"]).output() {
         let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if !path.is_empty() {
             std::env::set_var("PATH", &path);
@@ -59,16 +61,21 @@ fn fix_path_env() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "macos")]
     fix_path_env();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_nspanel::init())
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init());
+
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_nspanel::init());
+
+    builder
         .setup(|app| {
             navigator::init(app);
-            #[cfg(target_os = "macos")]
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
             app.handle().plugin(tauri_plugin_autostart::init(
                 tauri_plugin_autostart::MacosLauncher::LaunchAgent,
                 None::<Vec<&str>>,

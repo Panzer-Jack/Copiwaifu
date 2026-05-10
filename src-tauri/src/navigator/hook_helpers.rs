@@ -2,18 +2,18 @@ use std::{fs, path::PathBuf};
 
 use serde_json::{json, Value};
 
+use crate::platform;
+
 pub const SOURCE_MARKER: &str = "copiwaifu";
 
 // ── Path helpers ──────────────────────────────────────────────────────────────
 
 pub fn home_dir() -> Result<PathBuf, String> {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set".to_string())
+    platform::home_dir_result()
 }
 
 pub fn runtime_dir() -> Result<PathBuf, String> {
-    Ok(home_dir()?.join(".copiwaifu"))
+    platform::runtime_dir()
 }
 
 pub fn hook_dir() -> Result<PathBuf, String> {
@@ -48,11 +48,17 @@ pub fn opencode_plugin_path() -> Result<PathBuf, String> {
 }
 
 pub fn opencode_config_path() -> Result<PathBuf, String> {
-    Ok(home_dir()?.join(".config").join("opencode").join("config.json"))
+    Ok(home_dir()?
+        .join(".config")
+        .join("opencode")
+        .join("config.json"))
 }
 
 pub fn opencode_config_path_new() -> Result<PathBuf, String> {
-    Ok(home_dir()?.join(".config").join("opencode").join("opencode.json"))
+    Ok(home_dir()?
+        .join(".config")
+        .join("opencode")
+        .join("opencode.json"))
 }
 
 pub fn backup_path() -> Result<PathBuf, String> {
@@ -157,7 +163,10 @@ pub fn toml_parse_array(text: &str) -> Vec<String> {
 }
 
 pub fn toml_build_notify(args: &[String]) -> String {
-    let items: Vec<String> = args.iter().map(|a| format!("\"{}\"", a)).collect();
+    let items: Vec<String> = args
+        .iter()
+        .map(|a| serde_json::to_string(a).unwrap_or_else(|_| format!("{a:?}")))
+        .collect();
     format!("notify = [{}]", items.join(", "))
 }
 
@@ -198,7 +207,7 @@ pub fn toml_remove_notify(content: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{toml_find_notify, toml_remove_notify, toml_upsert_notify};
+    use super::{toml_build_notify, toml_find_notify, toml_remove_notify, toml_upsert_notify};
 
     #[test]
     fn upsert_notify_inserts_before_first_table() {
@@ -220,6 +229,19 @@ mod tests {
         assert_eq!(
             toml_upsert_notify(content, "notify = [\"node\", \"hook.js\"]"),
             "notify = [\"node\", \"hook.js\"]\n[profiles.default]\nnotify = [\"nested\"]"
+        );
+    }
+
+    #[test]
+    fn build_notify_escapes_windows_paths() {
+        let line = toml_build_notify(&[
+            "node".to_string(),
+            r"C:\Users\name\.copiwaifu\hooks\copiwaifu-hook.js".to_string(),
+        ]);
+
+        assert_eq!(
+            line,
+            r#"notify = ["node", "C:\\Users\\name\\.copiwaifu\\hooks\\copiwaifu-hook.js"]"#
         );
     }
 }

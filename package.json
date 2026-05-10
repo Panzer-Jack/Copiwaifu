@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "run": "pnpm tauri dev",
+    "tauri:build:windows": "pnpm tauri build --bundles nsis,msi",
     "sidecar:build": "esbuild sidecar/ai-runtime/src/main.mjs --bundle --platform=node --format=esm --outfile=sidecar/ai-runtime/bundle/main.mjs",
     "release": "release-it",
     "release:sync-version": "node scripts/sync-release-version.mjs"

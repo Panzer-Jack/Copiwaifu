@@ -10,10 +10,11 @@ use tauri::{
     image::Image, menu::MenuBuilder, tray::TrayIconBuilder, App, AppHandle, Emitter, LogicalSize,
     Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
-#[cfg(target_os = "macos")]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use tauri_plugin_autostart::ManagerExt as _;
 
 use crate::navigator::NavigatorStore;
+use crate::platform;
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const SETTINGS_WINDOW_LABEL: &str = "settings";
@@ -373,8 +374,8 @@ fn save_settings_inner(
         &settings.action_group_bindings,
         &model_scan.available_motion_groups,
     );
-    persist_settings(app_handle, &settings)?;
     sync_autostart(app_handle, settings.auto_start)?;
+    persist_settings(app_handle, &settings)?;
 
     apply_main_window_size(&main_window(app_handle)?, &settings.window_size)
         .map_err(|err| err.to_string())?;
@@ -419,7 +420,9 @@ fn load_shell_state(app_handle: &AppHandle) -> Result<ShellState, String> {
         &model_scan.available_motion_groups,
     );
     persist_settings(app_handle, &settings)?;
-    sync_autostart(app_handle, settings.auto_start)?;
+    if let Err(err) = sync_autostart(app_handle, settings.auto_start) {
+        eprintln!("[shell] autostart sync skipped during startup: {err}");
+    }
 
     Ok(ShellState {
         settings,
@@ -1302,27 +1305,41 @@ fn invalid_model_path_message(language: AppLanguage) -> String {
 }
 
 fn sync_autostart(app_handle: &AppHandle, enabled: bool) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {
         let manager = app_handle.autolaunch();
-        if enabled {
-            manager.enable().map_err(|err| err.to_string())?;
+        let result = if enabled {
+            manager.enable()
         } else {
-            manager.disable().map_err(|err| err.to_string())?;
+            manager.disable()
+        };
+
+        if let Err(err) = result {
+            let message = err.to_string();
+            if !enabled && is_missing_autostart_entry_error(&message) {
+                return Ok(());
+            }
+            return Err(message);
         }
     }
 
     Ok(())
 }
 
+fn is_missing_autostart_entry_error(message: &str) -> bool {
+    message.contains("os error 2")
+        || message.contains("No such file")
+        || message.contains("cannot find the file")
+        || message.contains("找不到指定的文件")
+}
+
 fn read_runtime_port() -> Option<u16> {
-    let home = std::env::var_os("HOME").map(PathBuf::from)?;
     let candidates = [
-        home.join(".copiwaifu/port"),
-        PathBuf::from("/tmp/copiwaifu-port"),
+        platform::primary_port_file().ok(),
+        Some(platform::fallback_port_file()),
     ];
 
-    for path in candidates {
+    for path in candidates.into_iter().flatten() {
         if let Ok(value) = fs::read_to_string(path) {
             if let Ok(port) = value.trim().parse::<u16>() {
                 return Some(port);

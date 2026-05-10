@@ -8,6 +8,7 @@ use super::{
     events::{AgentEvent, AgentType, EventData, EventType},
     state::NavigatorState,
 };
+use crate::platform;
 
 const SESSION_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
@@ -140,7 +141,5 @@ fn recover_summary_from_events(json: &serde_json::Value) -> Option<String> {
 }
 
 fn home_sessions_dir() -> Option<PathBuf> {
-    std::env::var("HOME")
-        .ok()
-        .map(|h| PathBuf::from(h).join(".copiwaifu").join("sessions"))
+    platform::home_dir().map(|home| home.join(".copiwaifu").join("sessions"))
 }

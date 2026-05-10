@@ -7,7 +7,7 @@ import path from 'node:path'
 
 const PORT_FILES = [
   path.join(os.homedir(), '.copiwaifu', 'port'),
-  '/tmp/copiwaifu-port',
+  path.join(os.tmpdir(), 'copiwaifu-port'),
 ]
 const SESSION_DIR = path.join(os.homedir(), '.copiwaifu', 'sessions')
 

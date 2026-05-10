@@ -5,6 +5,8 @@ use std::{
 
 use serde_json::json;
 
+use crate::platform;
+
 use super::{
     events::{AgentType, SessionPhase},
     state::SessionSnapshot,
@@ -117,7 +119,5 @@ fn atomic_write_json(path: &Path, value: &serde_json::Value) -> Result<(), Strin
 }
 
 fn home_dir() -> Result<PathBuf, String> {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .ok_or_else(|| "HOME is not set".to_string())
+    platform::home_dir_result()
 }
