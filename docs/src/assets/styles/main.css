@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -30,7 +28,7 @@ img {
 }
 
 :root {
-  font-family: 'Outfit', 'M PLUS Rounded 1c', 'PingFang SC', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
   color: #2f4e70;
   background: #eef7ff;
 }
@@ -51,7 +49,7 @@ button {
 }
 
 .font-display {
-  font-family: 'M PLUS Rounded 1c', 'Outfit', 'PingFang SC', sans-serif;
+  font-family: inherit;
 }
 
 ::selection {
