@@ -140,7 +140,7 @@ const bubbleClassName = computed(() => `speech-bubble--${props.windowSize}`)
 
 .speech-bubble__text {
   display: block;
-  font-family: 'M PLUS Rounded 1c', 'Outfit', 'PingFang SC', sans-serif;
+  font-family: inherit;
   font-size: var(--bubble-font-size);
   line-height: 1.6;
   color: #4a5568;
