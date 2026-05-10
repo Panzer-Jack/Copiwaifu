@@ -55,7 +55,14 @@ Original hook definitions are backed up to `~/.copiwaifu/hooks/original-hooks.js
 
 ## Platform
 
-Copiwaifu is currently built and released for macOS. The app uses macOS-specific window behavior and the release workflow only publishes macOS artifacts.
+Copiwaifu keeps the native macOS desktop-pet window behavior while adding maintainable Windows development and packaging paths:
+
+- macOS: continues to use `tauri-nspanel`, hidden Dock behavior, and all-space window behavior.
+- Windows: does not load macOS-only plugins and uses Tauri's standard transparent, borderless, always-on-top window, system tray, and autostart plugin.
+- Hook and runtime files prefer the user's `.copiwaifu` directory, and fallback port files are written to the system temp directory instead of a hardcoded `/tmp`.
+- Codex `notify` configuration escapes Windows backslash paths as TOML strings.
+
+Windows maintenance notes are available in [docs/WINDOWS.zh-CN.md](docs/WINDOWS.zh-CN.md).
 
 ## Tech Stack
 
@@ -103,6 +110,7 @@ pnpm build                 # type-check, build the frontend bundle, and bundle t
 pnpm sidecar:build         # bundle sidecar/ai-runtime into sidecar/ai-runtime/bundle/main.mjs
 pnpm tauri dev             # run the desktop app in dev mode
 pnpm run                   # shortcut for pnpm tauri dev
+pnpm tauri:build:windows   # build NSIS / MSI installers on Windows
 pnpm tauri build           # build desktop artifacts locally
 pnpm release               # run release-it
 pnpm release:sync-version  # sync version across package.json / tauri.conf.json / Cargo.toml
@@ -142,15 +150,15 @@ To make state animations useful, define motion groups in your model and bind the
 
 - The app checks for updates through the Tauri updater plugin.
 - Update metadata is fetched from GitHub Releases.
-- The repository workflow publishes release artifacts for Apple Silicon and Intel macOS when pushing tags matching `app-v*`.
+- The repository workflow publishes release artifacts for Apple Silicon macOS, Intel macOS, and Windows when pushing tags matching `app-v*`.
 
 ## Notes
 
 - Copiwaifu modifies local AI CLI config files to install hooks. Review those changes if you already maintain custom hook chains.
-- Runtime session files and port files are written under `~/.copiwaifu`.
+- Runtime session files and primary port files are written under `~/.copiwaifu`.
 - AI Talk settings, including API keys, are saved locally in the app settings file and are only used for the selected model provider.
 - Session files keep bounded metadata for recovery and AI Talk, including recent event digests, `lastMeaningfulSummary`, and `aiTalkContext`.
-- A temporary fallback port file is also written to `/tmp/copiwaifu-port`.
+- A temporary fallback port file is also written to the system temp directory.
 
 ## License
 

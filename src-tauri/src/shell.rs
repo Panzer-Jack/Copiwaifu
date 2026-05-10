@@ -374,10 +374,8 @@ fn save_settings_inner(
         &settings.action_group_bindings,
         &model_scan.available_motion_groups,
     );
+    sync_autostart(app_handle, settings.auto_start)?;
     persist_settings(app_handle, &settings)?;
-    if let Err(err) = sync_autostart(app_handle, settings.auto_start) {
-        eprintln!("[shell] autostart sync skipped during startup: {err}");
-    }
 
     apply_main_window_size(&main_window(app_handle)?, &settings.window_size)
         .map_err(|err| err.to_string())?;
@@ -422,7 +420,9 @@ fn load_shell_state(app_handle: &AppHandle) -> Result<ShellState, String> {
         &model_scan.available_motion_groups,
     );
     persist_settings(app_handle, &settings)?;
-    sync_autostart(app_handle, settings.auto_start)?;
+    if let Err(err) = sync_autostart(app_handle, settings.auto_start) {
+        eprintln!("[shell] autostart sync skipped during startup: {err}");
+    }
 
     Ok(ShellState {
         settings,
