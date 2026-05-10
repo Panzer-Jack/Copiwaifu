@@ -151,7 +151,7 @@ AI Talk 只使用 Copiwaifu 已保存的 session 元信息：Agent 类型、sess
 
 - 应用通过 Tauri Updater 检查更新。
 - 更新元数据来自 GitHub Releases。
-- 当推送 `app-v*` 格式的 tag 时，仓库工作流会构建并发布 macOS Apple Silicon 与 Intel 两套产物。
+- 当推送 `app-v*` 格式的 tag 时，仓库工作流会构建并发布 macOS Apple Silicon、macOS Intel 和 Windows 版产物。
 
 ## 注意事项
 

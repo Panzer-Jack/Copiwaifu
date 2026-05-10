@@ -6,7 +6,7 @@ on:
       - 'app-v*'
   workflow_dispatch:
 
-# On each push to an `app-v*` tag it will create or update a GitHub release,
+# On each push to an `app-v*` tag it will create or update a draft GitHub release,
 # build the app, and upload the artifacts to the release.
 
 jobs:
@@ -67,8 +67,9 @@ jobs:
         with:
           tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: false
+          releaseBody: ''
+          releaseDraft: true
+          generateReleaseNotes: true
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}
