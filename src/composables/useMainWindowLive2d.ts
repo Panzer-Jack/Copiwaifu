@@ -5,7 +5,7 @@ import { Config, LogLevel } from 'easy-live2d'
 import { onMounted, onUnmounted, ref, toValue, watch } from 'vue'
 import { createLive2DRuntime } from '../live2d/runtime'
 import { createMotionController } from '../live2d/motion-controller'
-import type { MotionGroupOption, TAgentState, WindowSizePreset } from '../types/agent'
+import type { ModelScanResult, TAgentState, WindowSizePreset } from '../types/agent'
 
 export interface UseMainWindowLive2dOptions {
   canvasRef: Ref<HTMLCanvasElement | undefined>
@@ -13,13 +13,14 @@ export interface UseMainWindowLive2dOptions {
   windowSize: MaybeRefOrGetter<WindowSizePreset>
   currentState: Ref<TAgentState>
   getActionGroupBindings: () => Record<TAgentState, string | null>
-  getFallbackMotionGroups: () => readonly MotionGroupOption[]
+  getModelScan: () => ModelScanResult
   onModelReady?: () => void
 }
 
 export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
   const currentWindow = getCurrentWindow()
   const runtimeReady = ref(false)
+  const modelError = ref<string | null>(null)
 
   let runtime: ReturnType<typeof createLive2DRuntime> | null = null
   let canvasResizeObserver: ResizeObserver | null = null
@@ -30,7 +31,7 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
     getSprite: () => runtime?.getSprite() ?? null,
     getCurrentState: () => options.currentState.value,
     getActionGroupBindings: options.getActionGroupBindings,
-    getFallbackMotionGroups: options.getFallbackMotionGroups,
+    getFallbackMotionGroups: () => options.getModelScan().availableMotionGroups,
   })
 
   Config.MotionGroupIdle = 'Idle'
@@ -42,14 +43,20 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
     await runtime?.syncSize()
   }
 
+  function onModelError(error: unknown) {
+    modelError.value = error instanceof Error ? error.message : String(error)
+  }
+
   async function mountModel(modelUrl: string) {
     if (!runtimeReady.value || !runtime || !modelUrl) {
       return
     }
 
     motionController.invalidate()
+    modelError.value = null
     await runtime.mountModel({
       modelEntryUrl: modelUrl,
+      onError: onModelError,
       onReady: () => {
         options.onModelReady?.()
       },
@@ -78,7 +85,13 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
     })
 
     motionController.syncIdleMotionGroupConfig()
-    await runtime.init()
+    try {
+      await runtime.init()
+    }
+    catch (error) {
+      onModelError(error)
+      return
+    }
     runtimeReady.value = true
     await syncSize()
 
@@ -119,9 +132,13 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
   })
 
   watch(
-    () => [runtimeReady.value, toValue(options.modelUrl)] as const,
-    ([ready, modelUrl]) => {
+    [runtimeReady, () => toValue(options.modelUrl), options.getModelScan],
+    ([ready, modelUrl], [wasReady, previousUrl]) => {
       if (!ready || !modelUrl) {
+        return
+      }
+      // Reimporting a custom model can replace the files at the same URL.
+      if (wasReady && modelUrl === previousUrl && modelError.value === null) {
         return
       }
 
@@ -138,6 +155,7 @@ export function useMainWindowLive2d(options: UseMainWindowLive2dOptions) {
   )
 
   return {
+    modelError,
     playState,
     refreshCurrentState,
     syncIdleMotionGroupConfig: motionController.syncIdleMotionGroupConfig,

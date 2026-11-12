@@ -7,6 +7,7 @@ const SPRITE_FIT_PADDING = 8
 export interface MountLive2DModelOptions {
   modelEntryUrl: string
   onReady?: (sprite: Live2DSprite) => void
+  onError: (error: unknown) => void
 }
 
 export interface CreateLive2DRuntimeOptions {
@@ -118,15 +119,29 @@ export function createLive2DRuntime(options: CreateLive2DRuntimeOptions) {
     }
 
     const token = ++mountToken
-    const nextSprite = await createLive2DModelSprite({
-      modelEntryUrl: mountOptions.modelEntryUrl,
-    })
+    function onError(error: unknown) {
+      if (disposed || token !== mountToken) {
+        return
+      }
+      destroyModel()
+      mountOptions.onError(error)
+    }
+
+    let nextSprite: Live2DSprite
+    try {
+      nextSprite = await createLive2DModelSprite(mountOptions)
+    }
+    catch (error) {
+      onError(error)
+      return null
+    }
 
     if (disposed || token !== mountToken) {
       nextSprite.destroy()
       return null
     }
 
+    nextSprite.onLive2D('error', onError)
     nextSprite.onLive2D('ready', () => {
       if (disposed || token !== mountToken || sprite !== nextSprite) {
         return

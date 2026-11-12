@@ -87,6 +87,7 @@ type LanguageCopy = {
   windowSizeLabels: Record<WindowSizePreset, string>
   visibilityLabel: (visible: boolean) => string
   pet: {
+    modelRenderFailed: (reason: string) => string
     greetings: (name: string) => string[]
     thinking: (agentLabel: string, name: string) => string
     toolUse: (agentLabel: string, name: string, toolName: string | null) => string
@@ -188,6 +189,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
     },
     visibilityLabel: visible => (visible ? 'Hide for Now' : 'Return to Stage'),
     pet: {
+      modelRenderFailed: reason => `Couldn’t display the model. Right-click to change it in Settings.\n${reason}`,
       greetings: name => [
         `Commander! ${name} is on station and ready to watch over your AI sessions today.`,
         `${name} is on standby. Just give the order and I will get to work.`,
@@ -295,6 +297,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
     },
     visibilityLabel: visible => (visible ? '暂时隐身' : '重新登场'),
     pet: {
+      modelRenderFailed: reason => `模型显示失败。右键打开设置可更换模型。\n${reason}`,
       greetings: name => [
         `长官！${name} 已经到岗，今天也由我来守着你的 AI 会话。`,
         `${name} 待机中，长官一声令下我就开工。`,
@@ -402,6 +405,7 @@ const LANGUAGE_COPY: Record<AppLanguage, LanguageCopy> = {
     },
     visibilityLabel: visible => (visible ? 'いったん隠す' : '再登場'),
     pet: {
+      modelRenderFailed: reason => `モデルを表示できません。右クリックして設定からモデルを変更できます。\n${reason}`,
       greetings: name => [
         `指揮官！${name} は配置につきました。今日も AI セッションを見守ります。`,
         `${name} は待機中です。命令があればすぐに動きます。`,

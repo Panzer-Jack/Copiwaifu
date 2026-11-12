@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Config, Live2DSprite, LogLevel, Priority } from 'easy-live2d'
-import { Application, Ticker } from 'pixi.js'
+import { Application } from 'pixi.js'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useSpeechBubble } from '@/composables/useSpeechBubble'
 import SpeechBubble from './SpeechBubble.vue'
@@ -196,7 +196,6 @@ async function mountSprite() {
 
   const sprite = new Live2DSprite({
     modelPath: '/Resources/Yulia/Yulia.model3.json',
-    ticker: Ticker.shared,
   })
 
   sprite.onLive2D('ready', () => {
