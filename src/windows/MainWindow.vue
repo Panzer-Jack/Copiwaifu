@@ -53,6 +53,7 @@ const visibilityLabel = computed(() => (
 ))
 
 const {
+  modelError,
   playState,
   refreshCurrentState,
   syncIdleMotionGroupConfig,
@@ -62,7 +63,7 @@ const {
   windowSize: computed(() => props.bootstrap.settings.windowSize),
   currentState,
   getActionGroupBindings: () => props.bootstrap.settings.actionGroupBindings,
-  getFallbackMotionGroups: () => props.bootstrap.modelScan.availableMotionGroups,
+  getModelScan: () => props.bootstrap.modelScan,
   onModelReady: () => {
     say(randomGreeting(), 2800)
     startIdleGreetingLoop()
@@ -371,8 +372,8 @@ watch(
       data-tauri-drag-region
     >
       <SpeechBubble
-        :text="displayedText"
-        :visible="isVisible"
+        :text="modelError === null ? displayedText : ui.pet.modelRenderFailed(modelError)"
+        :visible="modelError !== null || isVisible"
         :window-size="props.bootstrap.settings.windowSize"
       />
     </section>

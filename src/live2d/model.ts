@@ -1,5 +1,5 @@
 import { CubismSetting, Live2DSprite } from 'easy-live2d'
-import { Application, Ticker } from 'pixi.js'
+import { Application } from 'pixi.js'
 import type { MotionGroupOption } from '../types/agent'
 
 export interface CreateLive2DModelSpriteOptions {
@@ -48,10 +48,7 @@ export async function createLive2DModelSprite(
     return new URL(file, modelEntryUrl).toString()
   })
 
-  return new Live2DSprite({
-    modelSetting,
-    ticker: Ticker.shared,
-  })
+  return new Live2DSprite({ modelSetting })
 }
 
 export async function readAvailableMotionGroups(options: CreateLive2DModelSpriteOptions) {

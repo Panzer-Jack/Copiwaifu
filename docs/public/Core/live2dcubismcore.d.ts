@@ -25,12 +25,60 @@ declare namespace Live2DCubismCore {
     const MocVersion_40: number;
     /** .moc3 file version 4.2.00 - 4.2.04 */
     const MocVersion_42: number;
-    /** .moc3 file version 5.0.00 - */
+    /** .moc3 file version 5.0.00 - 5.2.03 */
     const MocVersion_50: number;
+    /** .moc3 file version 5.3.00 - */
+    const MocVersion_53: number;
     /** Normal Parameter. */
     const ParameterType_Normal: number;
     /** Parameter for blend shape. */
     const ParameterType_BlendShape: number;
+    /** Normal blend. */
+    const ColorBlendType_Normal: number;
+    /** Add blend. */
+    const ColorBlendType_Add: number;
+    /** AddGlow blend. */
+    const ColorBlendType_AddGlow: number;
+    /** Darken blend. */
+    const ColorBlendType_Darken: number;
+    /** Multiply blend. */
+    const ColorBlendType_Multiply: number;
+    /** ColorBurn blend. */
+    const ColorBlendType_ColorBurn: number;
+    /** LinearBurn blend. */
+    const ColorBlendType_LinearBurn: number;
+    /** Lighten blend. */
+    const ColorBlendType_Lighten: number;
+    /** Screen blend. */
+    const ColorBlendType_Screen: number;
+    /** ColorDodge blend. */
+    const ColorBlendType_ColorDodge: number;
+    /** Overlay blend. */
+    const ColorBlendType_Overlay: number;
+    /** SoftLight blend. */
+    const ColorBlendType_SoftLight: number;
+    /** HardLight blend. */
+    const ColorBlendType_HardLight: number;
+    /** LinearLight blend. */
+    const ColorBlendType_LinearLight: number;
+    /** Hue blend. */
+    const ColorBlendType_Hue: number;
+    /** Color blend. */
+    const ColorBlendType_Color: number;
+    /** Add compatible blend. */
+    const ColorBlendType_AddCompatible: number;
+    /** Multiply compatible blend. */
+    const ColorBlendType_MultiplyCompatible: number;
+    /** Over blend. */
+    const AlphaBlendType_Over: number;
+    /** Atop blend. */
+    const AlphaBlendType_Atop: number;
+    /** Out blend. */
+    const AlphaBlendType_Out: number;
+    /** ConjointOver blend. */
+    const AlphaBlendType_ConjointOver: number;
+    /** DisjointOver blend. */
+    const AlphaBlendType_DisjointOver: number;
     /** Log handler.
      *
      * @param message Null-terminated string message to log.
@@ -53,13 +101,20 @@ declare namespace Live2DCubismCore {
          */
         static csmGetLatestMocVersion(): csmMocVersion;
         /**
-         * Gets Moc file format version.
+         * Gets Moc file's format version
          *
-         * @param moc Moc
-         *
-         * @return csmMocVersion
+         * @param {Moc} moc Moc
+         * @param {ArrayBuffer} mocBytes Arraybuffer
+         * @returns {csmMocVersion} Moc file format version.
          */
         static csmGetMocVersion(moc: Moc, mocBytes: ArrayBuffer): csmMocVersion;
+        /**
+         * Gets Moc file's format version
+         *
+         * @param {ArrayBuffer} mocBytes Moc bytes.
+         * @returns {csmMocVersion} Moc file format version.
+         */
+        static csmGetMocVersion(mocBytes: ArrayBuffer): csmMocVersion;
         private constructor();
     }
     /** Cubism logging. */
@@ -123,8 +178,12 @@ declare namespace Live2DCubismCore {
         parts: Parts;
         /** Drawables. */
         drawables: Drawables;
+        /** Offscreen. */
+        offscreens: Offscreens;
         /** Canvas information. */
         canvasinfo: CanvasInfo;
+        /** Object render orders. */
+        private renderOrders;
         /**
          * Creates [[Model]] from [[Moc]].
          *
@@ -133,6 +192,12 @@ declare namespace Live2DCubismCore {
          * @return [[Model]] on success; [[null]] otherwise.
          */
         static fromMoc(moc: Moc): Model;
+        /**
+         * Gets object render orders.
+         *
+         * @returns {Int32Array} Object render orders.
+         */
+        getRenderOrders(): Int32Array;
         /** Updates instance. */
         update(): void;
         /** Releases instance. */
@@ -181,6 +246,8 @@ declare namespace Live2DCubismCore {
         defaultValues: Float32Array;
         /** Parameter values. */
         values: Float32Array;
+        /** Parameter Repeat informations. */
+        repeats: Int32Array;
         /** Number of key values of each parameter. */
         keyCounts: Int32Array;
         /** Key values of each parameter. */
@@ -202,6 +269,8 @@ declare namespace Live2DCubismCore {
         opacities: Float32Array;
         /** Part's parent part indices. */
         parentIndices: Int32Array;
+        /** Part's offscreen indices. If the part does not use an offscreen, the value is '-1'. */
+        offscreenIndices: Int32Array;
         /**
          * Initializes instance.
          *
@@ -223,8 +292,6 @@ declare namespace Live2DCubismCore {
         textureIndices: Int32Array;
         /** Drawable draw orders. */
         drawOrders: Int32Array;
-        /** Drawable render orders. */
-        renderOrders: Int32Array;
         /** Drawable opacities. */
         opacities: Float32Array;
         /** Mask count for each drawable. */
@@ -247,10 +314,39 @@ declare namespace Live2DCubismCore {
         screenColors: Float32Array;
         /** Indices of drawables parent part. */
         parentPartIndices: Int32Array;
+        /** Blend modes of drawables. */
+        blendModes: Int32Array;
         /** Resets all dynamic drawable flags.. */
         resetDynamicFlags(): void;
         /** Native model. */
         private _modelPtr;
+        /**
+         * Initializes instance.
+         *
+         * @param modelPtr Native model.
+         */
+        constructor(modelPtr: number);
+    }
+    /** Cubism model offscreens */
+    class Offscreens {
+        /** Number of offscreens. */
+        count: number;
+        /** Offscreen blend modes. */
+        blendModes: Int32Array;
+        /** Offscreen opacities. */
+        opacities: Float32Array;
+        /** Offscreen's owner indices. */
+        ownerIndices: Int32Array;
+        /** Offscreen's multiply colors. */
+        multiplyColors: Float32Array;
+        /** Offscreen's screen colors. */
+        screenColors: Float32Array;
+        /** Offscreen's mask counts. */
+        maskCounts: Int32Array;
+        /** Offscreen's masks. */
+        masks: Array<Int32Array>;
+        /** Offscreen's constant flags. */
+        constantFlags: Uint8Array;
         /**
          * Initializes instance.
          *
